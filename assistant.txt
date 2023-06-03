@@ -1,0 +1,5 @@
+Header set Content-Security-Policy "default-src 'self' https://www.google.com; img-src 'self' https:; script-src 'self' https://www.google.com https://yandex.ru; style-src 'self' https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta2/css/; connect-src 'self' https: https://www.google.com https://yandex.ru https://en.wikipedia.org https://api.openai.com;"
+
+
+
+let apiRequestUrl = `api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}&searchType=${searchType}`;

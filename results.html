@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="results.css">
+    <meta charset="UTF-8">
+    <meta name="robots" content="index, follow">
+    <meta name="description" content="Beamo is the smartest search engine with cutting-edge AI tech that will blow your mind away. Change the world.">
+    <meta name="keywords" content="Beamo, search engine, search, online search, web search, fast search, best">
+    <meta name="classification" content="Search Engine">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <title>Beamo</title>
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+    <main>
+      <div id="header">
+        <form id="search-form" role="search" class="search-form-styling">
+          <a href="index.html">
+            <img src="logo.webp" alt="Beamo Search" aria-label="Beamo Home" class="headerimage">
+          </a>
+          <label for="search-term" class="sr-only">Search term</label>
+          <input type="text" id="search-term" name="q" autocomplete="off" placeholder="Search..." maxlength="2000" autofocus>
+          <ul id="suggestions-list" class="suggestions-hidden"></ul>
+          <div id="button-container">
+            <button id="searchBtn" type="button">All</button>
+            <button id="imagesBtn" type="button">Images</button>
+            <button id="mapsBtn" type="button">Maps</button>
+            <button id="newsBtn" type="button">News</button>
+            <button id="videoBtn" type="button">Videos</button>
+          </div>
+        </form>
+        <div id="maps-container"></div>
+      </div>
+      <div class="box" id="assistant-response-box" aria-live="polite" aria-busy="true">
+        Getting response...
+      </div>
+      <div id="weather-container" class="hidden">
+        <div id="location" class="location"></div>
+        <img id="weather-icon" src="" alt="Weather Icon">
+        <nav>
+            <button class="nav-button" data-target="temperature-section">Temperature</button>
+            <button class="nav-button" data-target="precipitation-section">Precipitation</button>
+            <button class="nav-button" data-target="wind-section">Wind</button>
+        </nav>
+        <section id="temperature-section" class="weather-section">
+            <div id="temperature"></div>
+            <div id="feels-like"></div>
+            <div id="condition"></div>
+        </section>
+        <section id="precipitation-section" class="weather-section hidden">
+            <div id="humidity"></div>
+            <div id="pressure"></div>
+            <div id="uv"></div>
+        </section>
+        <section id="wind-section" class="weather-section hidden">
+            <div id="wind"></div>
+            <div id="gust"></div>
+            <div id="visibility"></div>
+        </section>
+    </div>      
+      <div id="calculator-container"></div>  
+      <div id="definition-container" aria-live="polite"></div>     
+      <div id="timezone-container"></div>
+      <section id="search-results" aria-live="polite"></section>
+      <div id="related-searches-container"></div>
+    </main> 
+    <script src="results.js"></script>
+    <div id="pagination" class="pagination"></div>    
+  </body>
+</html>
