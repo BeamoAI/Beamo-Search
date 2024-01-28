@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteRule ^$ index.html [L]
+RewriteRule ^404$ notfound.html [L]

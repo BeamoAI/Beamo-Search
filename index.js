@@ -1,196 +1,279 @@
+let bufferedMessage = "";
+let i = 0;
+let isNewMessage = true;
+let isWaitingForData = false;
+var settingsButton = document.getElementById('settings-button');
+var settingsOptions = document.getElementById('settings-options');
+var searchForm = document.getElementById('search-form');
+
+searchForm.addEventListener('submit', function(event) {
+  var searchTerm = document.getElementById('search-term');
+
+  if (!searchTerm.value.trim()) {
+    event.preventDefault();
+  }
+});
+
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(position => {
+    const latitude = position.coords.latitude;
+    const longitude = position.coords.longitude;
+    localStorage.setItem('latitude', latitude);
+    localStorage.setItem('longitude', longitude);
+    localStorage.setItem('geoDataTime', Date.now());
+  });
+}
+
+settingsButton.addEventListener('click', function(event) {
+  event.stopPropagation();
+  if (settingsOptions.style.display != 'flex') {
+    if (!settingsButton.classList.contains('spinning')) {
+      settingsButton.classList.add('spinning');
+
+      setTimeout(function() {
+        settingsButton.classList.remove('spinning');
+      }, 2500);
+    }
+
+    settingsOptions.style.display = 'flex';
+  } else {
+    settingsOptions.style.display = 'none';
+  }
+});
+
+document.addEventListener('click', function(event) {
+  if (!settingsButton.contains(event.target) && settingsOptions.style.display === 'flex') {
+    settingsOptions.style.display = 'none';
+  }
+});
+
 window.onload = function() {
-  const placeholders = ["Find out anything...", "What's on your mind?", "What do you want to know?", "Search anything...", "Sharing the world's knowledge."];
-  const searchTerm = document.getElementById("search-term");
-  const suggestionsList = document.getElementById("suggestions-list");
-  const searchForm = document.getElementById("search-form");
+  var isChromium = window.chrome;
+  var winNav = window.navigator;
+  var vendorName = winNav.vendor;
+  var isOpera = typeof window.opr !== "undefined";
+  var isIEedge = winNav.userAgent.indexOf("Edge") > -1;
+  var isIOSChrome = winNav.userAgent.match("CriOS");
+  var isBrave = 'brave' in window.navigator;
 
-  const randomIndex = Math.floor(Math.random() * placeholders.length);
-  searchTerm.placeholder = placeholders[randomIndex];
-
-  searchTerm.addEventListener('input', searchWithAutosuggest);
-
-  searchTerm.addEventListener('keydown', function(event) {
-    if ((event.keyCode === 13 || event.keyCode === 9) && suggestionsList.style.display !== 'none') {
-      event.preventDefault();
-      if (suggestionsList.firstChild) {
-        suggestionsList.firstChild.click();
-      }
-    }
-  });  
-  
-  suggestionsList.addEventListener('click', function (event) {
-    if(event.target && event.target.nodeName == "LI") {
-      const selectedSuggestion = event.target.textContent;
-      searchTerm.value = searchTerm.value.startsWith('!') ? selectedSuggestion + " " : selectedSuggestion;
-      suggestionsList.style.display = 'none';
-      if(!searchTerm.value.startsWith('!')) {
-        searchForm.submit();
-      }
-    }
-  });
-
-  document.addEventListener('click', function (event) {
-    if (event.target.closest('#search-wrapper') === null) {
-      suggestionsList.style.display = 'none';
-    }
-  });
-};
-
-async function getBingAutoSuggest(query) {
-  const url = `api_request.php?apiType=autosuggest&searchTerm=${encodeURIComponent(query)}`;
-  const response = await fetch(url);
-
-  if (response.status === 200) {
-    const data = await response.json();
-    return data.suggestionGroups[0].searchSuggestions;
+  if ((isIOSChrome || isChromium !== null && typeof isChromium !== "undefined" && vendorName === "Google Inc." && isOpera === false && isIEedge === false) && !isBrave) {
   } else {
-    return [];
+    var chromeExtensionLink = document.getElementById('chrome-extension-link');
+    if (chromeExtensionLink) {
+      chromeExtensionLink.style.display = 'none';
+    }
   }
 }
 
-async function fetchSuggestions(query) {
-  let suggestions = await getBingAutoSuggest(query);
-  displaySuggestions(suggestions);
-}
+// Start of the chat feature
 
-function displaySuggestions(suggestions) {
-  const suggestionsList = document.getElementById('suggestions-list');
-  let html = '';
-  if (suggestions.length > 0) {
-    suggestions.forEach(function (suggestion) {
-      html += '<li>' + suggestion.displayText + '</li>';
-    });
-    suggestionsList.innerHTML = html;
-    suggestionsList.style.display = 'block';
-  } else {
-    suggestionsList.style.display = 'none';
-  }
-}
-
-function searchWithAutosuggest(event) {
-  const searchTerm = event.target;
-  const value = searchTerm.value.trim();
-
-  if (value.startsWith('!')) {
-    provideEngineSuggestions(value, searchTerm);
+document.getElementById('chatBtn').addEventListener('click', (e) => {
+  let existingChatInterface = document.getElementById('chat-interface');
+  if (existingChatInterface) {
+    existingChatInterface.remove();
+    fetch('deletechat.php');
     return;
-  }
+  }  
+  const chromeExtensionLink = document.getElementById('chrome-extension-link');
+  chromeExtensionLink && (chromeExtensionLink.style.display = 'none');
+  
+  const chatInterface = document.createElement('div');
+  chatInterface.id = 'chat-interface';
+  document.body.appendChild(chatInterface);
 
-  if (value.length > 2) {
-    fetchSuggestions(value);
-  } else {
-    displaySuggestions([]);
-  }
-}
+  const chatContainer = document.createElement('div');
+  chatContainer.id = 'chatContainer';
+  chatInterface.appendChild(chatContainer);
+  window.scrollTo(0,document.body.scrollHeight);
 
-const searchEngines = {
-  amazon: 'https://www.amazon.com/s?field-keywords=',
-  google: 'https://www.google.com/search?q=',
-  zillow: 'https://www.zillow.com/homes/',
-  stackoverflow: 'https://stackoverflow.com/search?q=',
-  imdb: 'https://www.imdb.com/find/?s=all&q=',
-  microsoft: 'https://www.microsoft.com/en-us/search/result.aspx?q=',
-  wikipedia: 'https://en.wikipedia.org/w/index.php?title=Special:Search&search=',
-  wowhead: 'https://www.wowhead.com/search?q=',
-  wikihow: 'https://www.wikihow.com/wikiHowTo?search=',
-  bbb: 'https://www.bbb.org/search?find_country=USA&find_text=',
-  huffpost: 'https://www.huffpost.com/search/?keywords=',
-  roblox: 'https://www.roblox.com/search/?keyword=',
-  apartments: 'https://www.apartments.com/search/?',
-  chase: 'https://www.chase.com/digital/resources/search-results.html?q=',
-  steamcommunity: 'https://steamcommunity.com/search/users/#text=',
-  yellowpages: 'https://www.yellowpages.com/search?search_terms=',
-  investopedia: 'https://www.investopedia.com/search/?q=',
-  techradar: 'https://www.techradar.com/search?searchTerm=',
-  xfinity: 'https://www.xfinity.com/search?q=',
-  accuweather: 'https://www.accuweather.com/search-locations?query=',
-  macys: 'https://www.macys.com/shop/featured/',
-  wayfair: 'https://www.wayfair.com/keyword.php?keyword=',
-  cbssports: 'https://www.cbssports.com/search/?query=',
-  hulu: 'https://www.hulu.com/search?q=',
-  foodnetwork: 'https://www.foodnetwork.com/search/',
-  paypal: 'https://www.paypal.com/us/smarthelp/search?q=',
-  wiktionary: 'https://en.wiktionary.org/wiki/Special:Search?search=',
-  retailmenot: 'https://www.retailmenot.com/s/',
-  office: 'https://office.com/search/results.aspx?omkt=en-US&q=',
-  usps: 'https://www.usps.com/search/?q=',
-  washingtonpost: 'https://www.washingtonpost.com/newssearch/?query=',
-  steampowered: 'https://store.steampowered.com/search/?term=',
-  lowes: 'https://www.lowes.com/search?searchTerm=',
-  irs: 'https://www.irs.gov/search/all?keywords=',
-  yahoofinance: 'https://finance.yahoo.com/quote/',
-  forbes: 'https://www.forbes.com/search/?q=',
-  spotify: 'https://open.spotify.com/search/',
-  allrecepies: 'https://www.allrecipes.com/search?q=',
-  genius: 'https://genius.com/search?q=',
-  foxnews: 'https://www.foxnews.com/search-results/search?q=',
-  usnews: 'https://www.usnews.com/search?q=',
-  urbandictionary: 'https://www.urbandictionary.com/define.php?term=',
-  medicalnewstoday: 'https://www.medicalnewstoday.com/search?q=',
-  usatoday: 'https://www.usatoday.com/search/?q=',
-  msn: 'https://www.msn.com/en-us/search?q=',
-  yahoo: 'https://www.yahoo.com/search/?p=',
-  mayoclinic: 'https://www.mayoclinic.org/search/search-results?q=',
-  dictionary: 'https://www.dictionary.com/browse/',
-  businessinsider: 'https://www.businessinsider.com/s?q=',
-  britannica: 'https://www.britannica.com/search?query=',
-  mapquest: 'https://www.mapquest.com/search/results?query=',
-  weather: 'https://weather.com/search/enhancedlocalsearch?where=',
-  netflix: 'https://www.netflix.com/search?q=',
-  rottentomatoes: 'https://www.rottentomatoes.com/search?search=',
-  quora: 'https://www.quora.com/search?q=',
-  homedepot: 'https://www.homedepot.com/s/',
-  target: 'https://www.target.com/s?searchTerm=',
-  gamepedia: 'https://www.fandom.com/?s=',
-  merriamwebster: 'https://www.merriam-webster.com/dictionary/',
-  cnn: 'https://www.cnn.com/search/?size=10&q=',
-  newyorktimes: 'https://www.nytimes.com/search?query=',
-  webmd: 'https://www.webmd.com/search/search_results/default.aspx?query=',
-  espn: 'https://www.espn.com/search/_/q/',
-  indeed: 'https://www.indeed.com/jobs?q=',
-  etsy: 'https://www.etsy.com/search?q=',
-  healthline: 'https://www.healthline.com/search?q=',
-  googleplay: 'https://play.google.com/store/search?q=',
-  linkedin: 'https://www.linkedin.com/search/results/all/?keywords=',
-  ebay: 'https://www.ebay.com/sch/i.html?_nkw=',
-  walmart: 'https://www.walmart.com/search/?query=',
-  instagram: 'https://www.instagram.com/explore/tags/',
-  tripadvisor: 'https://www.tripadvisor.com/Search?q=',
-  pinterest: 'https://www.pinterest.com/search/pins/?q=',
-  fandom: 'https://www.fandom.com/?s=',
-  reddit: 'https://www.reddit.com/search/?q=',
-  yelp: 'https://www.yelp.com/search?find_desc=',
-  twitter: 'https://twitter.com/search?q=',
-  youtube: 'https://www.youtube.com/results?search_query=',
-  depositphotos: 'https://depositphotos.com/stock-photos/',
-  makeuseof: 'https://www.makeuseof.com/search/',
-  biblegateway: 'https://www.biblegateway.com/quicksearch/?quicksearch=',
-  cbsnews: 'https://www.cbsnews.com/search/?q=',
-  thehindu: 'https://www.thehindu.com/search/?q=',
-  xdadevelopers: 'https://www.xda-developers.com/search/?q=',
-  myntra: 'https://www.myntra.com/',
-  marketwatch: 'https://www.marketwatch.com/search?q=',
-  curseforge: 'https://www.curseforge.com/search?search=',
-  spectrum: 'https://www.spectrum.net/search-results?k=',
-  dw: 'https://www.dw.com/search/?searchNavigationId=9097&languageCode=en&origin=gN&item=',
-  pcgamer: 'https://www.pcgamer.com/search/?searchTerm=',
-  epicgames: 'https://store.epicgames.com/browse?q=',
-  audible: 'https://www.audible.com/search?keywords='
-};
+  const chatInputContainer = document.createElement('div');
+  chatInputContainer.className = 'chat-input-container';
+  chatInterface.appendChild(chatInputContainer);
 
-function provideEngineSuggestions(searchValue, searchTerm) {
-  const lowerCaseValue = searchValue.toLowerCase();
-  const suggestions = [];
+  const closeButton = document.createElement('button');
+  closeButton.textContent = 'X';
+  closeButton.className = 'close-button-style';
+  closeButton.addEventListener('click', () => {
+    closeButton.style.transition = 'transform 0.25s ease';
+    closeButton.style.transform = 'scale(0.9)';
 
-  for (const key in searchEngines) {
-    if (key.startsWith(lowerCaseValue.substring(1))) {
-      suggestions.push({
-        displayText: `!${key}`,
-        url: searchEngines[key] + searchTerm.value.substring(lowerCaseValue.indexOf(' ')+1)
-      });
+    setTimeout(() => {
+      closeButton.style.transform = 'scale(1)';
+      let existingChatInterface = document.getElementById('chat-interface');
+      if (existingChatInterface) {
+        existingChatInterface.remove();
+        fetch('deletechat.php');
+      }
+    }, 250);
+  });  
+
+  closeButton.addEventListener('click', () => {
+    chromeExtensionLink && (chromeExtensionLink.style.display = 'block');
+    let existingChatInterface = document.getElementById('chat-interface');
+    existingChatInterface && existingChatInterface.remove();
+    fetch('deletechat.php');
+  });
+
+  const chat = document.createElement('button');
+  chat.className = 'enter-button-style';
+
+  const chatIcon = document.createElement('img');
+  chatIcon.src = 'arrow.webp';
+  chatIcon.style.width = '100%';
+  chatIcon.style.height = '100%';
+  chat.appendChild(chatIcon);
+
+  chatInputContainer.appendChild(chat);
+
+  const chatInput = document.createElement('textarea');
+  chatInput.id = 'chat-input';
+  chatInput.maxLength = 20000;
+  chatInputContainer.appendChild(chatInput);
+  chatInputContainer.appendChild(closeButton);
+
+  chatInput.addEventListener('input', function(event) {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = (chatInput.scrollHeight) + 'px';
+    if (chatInput.scrollHeight > parseInt(chatInput.style.maxHeight.replace('rem', ''))) {
+      chatInput.style.overflowY = 'auto';
+    } else {
+      chatInput.style.overflowY = 'hidden';
     }
-  }
+  });
 
-  suggestions.sort((a, b) => a.displayText.localeCompare(b.displayText));
-  displaySuggestions(suggestions.slice(0, 10));
+  chatInput.addEventListener('keyup', function(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      chat.click();
+    }
+  });
+
+  let prevResult = "";
+
+  chat.addEventListener('click', async () => {
+    const userMessage = chatInput.value.trim();
+    if (!userMessage) {
+      return;
+    }
+    chatInput.value = '';
+    chatInput.style.height = '3rem';
+  
+    chat.style.transition = 'transform 0.3s ease';
+    chat.style.transform = 'scale(0.9)';
+  
+    setTimeout(function() {
+      chat.style.transform = 'scale(1)';
+    }, 300);
+  
+    const userMsgElement = document.createElement('div');
+    userMsgElement.classList.add('user-msg-element');
+  
+    const userMsgText = document.createElement('div');
+    userMsgText.textContent = userMessage;
+    userMsgText.classList.add('user-msg-text');
+  
+    userMsgElement.appendChild(userMsgText);
+    chatContainer.appendChild(userMsgElement);
+  
+    let latitude = localStorage.getItem('latitude');
+    let longitude = localStorage.getItem('longitude');
+    let ipData = localStorage.getItem('ipData');
+  
+    if (!latitude || !longitude) {
+      if (ipData) {
+        ipData = JSON.parse(ipData);
+        latitude = ipData.latitude;
+        longitude = ipData.longitude;
+      } else {
+        const response = await fetch('https://ipinfo.io/json');
+        ipData = await response.json();
+        localStorage.setItem('ipData', JSON.stringify(ipData));
+        latitude = ipData.latitude;
+        longitude = ipData.longitude;
+      }
+    }
+  
+    const apiRequestUrl = `chat.php?userMessage=${encodeURIComponent(userMessage)}&latitude=${latitude}&longitude=${longitude}`;
+    const eventSource = new EventSource(apiRequestUrl);
+    let timeoutId;
+  
+    const aiMsgElement = document.createElement('div');
+    aiMsgElement.classList.add('ai-msg-element');
+  
+    const aiMsgImage = document.createElement('img');
+    aiMsgImage.src = 'lightningboltload.gif';
+    aiMsgImage.classList.add('ai-msg-image');
+  
+    aiMsgElement.appendChild(aiMsgImage);
+  
+    const aiMsgText = document.createElement('div');
+    aiMsgText.classList.add('ai-msg-text');
+  
+    aiMsgElement.appendChild(aiMsgText);
+    chatContainer.appendChild(aiMsgElement);  
+  
+    function typeMessage() {
+      if (i < bufferedMessage.length) {
+        aiMsgText.textContent += bufferedMessage[i];
+        i++;
+        const scrollValue = chatContainer.scrollHeight - chatContainer.clientHeight;
+        chatContainer.scrollTop = scrollValue;
+        setTimeout(typeMessage, 4.5);
+      } else {
+        isWaitingForData = true;
+      }
+    }        
+  
+    eventSource.onmessage = (event) => {
+      aiMsgImage.src = 'tlog.webp';
+      const jsonString = event.data.replace(/^data:\s*/, '');
+  
+      if (!isValidJson(jsonString)) {
+        return;
+      }
+  
+      let data = JSON.parse(jsonString);
+  
+      if (data.completion) {
+        if (prevResult !== data.completion) {
+          let newMessage = data.completion.replace(prevResult, '');
+          bufferedMessage += newMessage;
+          prevResult = data.completion;
+  
+          if (isNewMessage) {
+            typeMessage();
+            isNewMessage = false;
+          } else if (isWaitingForData) {
+            isWaitingForData = false;
+            typeMessage();
+          }
+        }
+      }          
+  
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        eventSource.close();
+      }, 3000);
+  
+      if (data.finished) {
+        eventSource.close();
+        clearTimeout(timeoutId);
+        bufferedMessage = "";
+        i = 0;
+        isNewMessage = true;
+      }
+    };
+  
+    eventSource.onerror = (error) => {
+      eventSource.close();
+    };
+  });
+});
+
+function isValidJson(str) {
+try {
+    JSON.parse(str);
+} catch (e) {
+    return false;
+}
+return true;
 }

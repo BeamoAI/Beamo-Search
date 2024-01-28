@@ -1,41 +1,52 @@
 const urlParams = new URLSearchParams(window.location.search);
-let searchTerm = urlParams.get('q');
-if(searchTerm) {
-  searchTerm = searchTerm.split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-document.title = `${searchTerm} - Beamo`;
-  
-  const searchTermInput = document.getElementById('search-term');
-  function insertAfter(newNode, referenceNode) {
-    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+const resultsTable = document.getElementById('search-results');
+const assistantResponseBox = document.getElementById("assistant-response-box");
+const searchTerm = urlParams.get('q');
+const words = searchTerm.trim().split(/\s+/);
+const searchbutton = document.getElementById('searchBtn');
+const imagebutton = document.getElementById('imagesBtn');
+const newsbutton = document.getElementById('newsBtn');
+const videobutton = document.getElementById('videoBtn');
+const chatbutton = document.getElementById('chatBtn');
+const searchForm = document.getElementById('search-form');
+const buttons = document.querySelectorAll('.custom-button');
+const definitionContainer = document.getElementById('definition-container');
+const submitsearchterm = document.getElementById('search-term');
+let searchresultstable = [];
+let shouldloadnewimageresults = true;
+let shouldloadnewimagescrollresults = false;
+let bufferedMessage = "";
+let i = 0;
+let isNewMessage = true;
+let isWaitingForData = false;
+let shouldContinueTyping = false;
+let searchesloaded = false;
+let offset = 105;
+let allresultspushed = false;
+let assistantresponse
+let requestIsInProgress = false;
+let apiCache = {};
+let loadingAnimation = '.';
+let loadingInterval;
+let currentPage = 0;
+let requestInProgress = false;
+let isImageSearch = false;
+let isNewsSearch = false;
+let isVideoSearch = false;
+let isAllSearch = true;
+let isChatSearch = false;
+let isFirstMessage = true;
+
+searchbutton.classList.add('blueunderline');
+document.getElementById('search-term').value = searchTerm;
+document.title = searchTerm;
+
+  searchForm.addEventListener('submit', function(event) {
+  if (!submitsearchterm.value.trim()) {
+    event.preventDefault();
   }
-  
-  function insertBefore(newNode, referenceNode) {
-    if (referenceNode) {
-      referenceNode.parentNode.insertBefore(newNode, referenceNode);
-    } else {
-      referenceNode.parentNode.appendChild(newNode);
-    }
-  }
-  
-  function insertAtTop(parentNode, newNode) {
-    if (parentNode.childNodes.length > 0) {
-      parentNode.insertBefore(newNode, parentNode.childNodes[0]);
-    } else {
-      parentNode.appendChild(newNode);
-    }
-  }
-  
-  function averageAbs(array) {
-    return array.reduce((acc, val) => acc + Math.abs(val), 0) / array.length;
-  }
-  
-  function averageAbs(array) {
-    return array.reduce((acc, val) => acc + Math.abs(val), 0) / array.length;
-  }
-  
+  });
+
   function isValidJson(jsonString) {
     try {
       JSON.parse(jsonString);
@@ -44,260 +55,77 @@ document.title = `${searchTerm} - Beamo`;
     }
     return true;
   }
-  
-  function isValidJson(jsonString) {
-    try {
-      JSON.parse(jsonString);
-    } catch (error) {
-      return false;
-    }
-    return true;
-  }
-  
+
   function fetchDefinitions(searchTerm) {
     const cleanedSearchTerm = searchTerm.toLowerCase().replace('definition', '').replace('define', '').trim();
     const definitionContainer = document.getElementById('definition-container');
   
-    definitionContainer.style.display = 'none';
-  
     if (cleanedSearchTerm.split(' ').length <= 3) {
-      const url = `api_request.php?apiType=merriamWebster&searchTerm=${encodeURIComponent(cleanedSearchTerm)}`;
+      const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(cleanedSearchTerm)}`;
       fetch(url)
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.status === 404) {
+            throw new Error('404');
+          }
+          return response.json();
+        })
         .then((data) => {
-          const definitions = JSON.parse(data[0]);
-  
-          if (definitions && definitions[0] && typeof definitions[0] !== 'string') {
+          if (data && data[0] && typeof data[0] !== 'string') {
             definitionContainer.style.display = 'block';
             definitionContainer.innerHTML = '';
   
-            definitions.slice(0, 3).forEach((entry) => {
+            data.forEach((entry) => {
               const definitionTitle = document.createElement('h3');
-              definitionTitle.textContent = entry.hwi.hw;
+              definitionTitle.textContent = entry.word;
               definitionContainer.appendChild(definitionTitle);
               definitionContainer.style.padding = '3.5vh';
               definitionContainer.style.borderRadius = '3.5vh';
-              if (entry.shortdef && entry.shortdef.length > 0) {
+  
+              if (entry.meanings && entry.meanings.length > 0) {
                 const definitionList = document.createElement('ul');
-                entry.shortdef.forEach((definition) => {
-                  const definitionItem = document.createElement('li');
-                  definitionItem.textContent = definition;
-                  definitionList.appendChild(definitionItem);
+                entry.meanings.forEach((meaning) => {
+                  if (meaning.definitions && meaning.definitions.length > 0) {
+                    meaning.definitions.forEach((definition) => {
+                      const definitionItem = document.createElement('li');
+                      definitionItem.textContent = definition.definition;
+                      definitionList.appendChild(definitionItem);
+                    });
+                  }
                 });
                 definitionContainer.appendChild(definitionList);
               }
             });
   
-            const merriamWebsterAttribution = document.createElement('p');
-            merriamWebsterAttribution.textContent = 'Results from Merriam-Webster';
-            merriamWebsterAttribution.classList.add('mw-attribution');
-            definitionContainer.appendChild(merriamWebsterAttribution);
+            const attribution = document.createElement('p');
+            attribution.textContent = 'Results from Dictionary API';
+            attribution.classList.add('mw-attribution');
+            definitionContainer.appendChild(attribution);
+          } else {
+            definitionContainer.style.display = 'none';
           }
         })
-        .catch((error) => console.error('Error fetching definition:', error));
+        .catch((error) => {
+          if (error.message !== '404') {
+            console.error('Error fetching definition:', error);
+          }
+          definitionContainer.style.display = 'none';
+        });
+    }
+    if (definitionContainer && definitionContainer.querySelector('h3')) {
+      definitionContainer.style.display = 'block';
+    } else {
+      definitionContainer.style.display = 'none';
     }
   }
-  
-    window.onload = function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchTerm = urlParams.get('q');
-  
+
     if (!searchTerm || searchTerm.trim() === '' || ' ') {
   }
-    
-  const searchEngines = {
-    amazon: 'https://www.amazon.com/s?field-keywords=',
-    google: 'https://www.google.com/search?q=',
-    zillow: 'https://www.zillow.com/homes/',
-    stackoverflow: 'https://stackoverflow.com/search?q=',
-    imdb: 'https://www.imdb.com/find/?s=all&q=',
-    microsoft: 'https://www.microsoft.com/en-us/search/result.aspx?q=',
-    wikipedia: 'https://en.wikipedia.org/w/index.php?title=Special:Search&search=',
-    wowhead: 'https://www.wowhead.com/search?q=',
-    wikihow: 'https://www.wikihow.com/wikiHowTo?search=',
-    bbb: 'https://www.bbb.org/search?find_country=USA&find_text=',
-    huffpost: 'https://www.huffpost.com/search/?keywords=',
-    roblox: 'https://www.roblox.com/search/?keyword=',
-    apartments: 'https://www.apartments.com/search/?',
-    chase: 'https://www.chase.com/digital/resources/search-results.html?q=',
-    steamcommunity: 'https://steamcommunity.com/search/users/#text=',
-    yellowpages: 'https://www.yellowpages.com/search?search_terms=',
-    investopedia: 'https://www.investopedia.com/search/?q=',
-    techradar: 'https://www.techradar.com/search?searchTerm=',
-    xfinity: 'https://www.xfinity.com/search?q=',
-    accuweather: 'https://www.accuweather.com/search-locations?query=',
-    macys: 'https://www.macys.com/shop/featured/',
-    wayfair: 'https://www.wayfair.com/keyword.php?keyword=',
-    cbssports: 'https://www.cbssports.com/search/?query=',
-    hulu: 'https://www.hulu.com/search?q=',
-    foodnetwork: 'https://www.foodnetwork.com/search/',
-    paypal: 'https://www.paypal.com/us/smarthelp/search?q=',
-    wiktionary: 'https://en.wiktionary.org/wiki/Special:Search?search=',
-    retailmenot: 'https://www.retailmenot.com/s/',
-    office: 'https://office.com/search/results.aspx?omkt=en-US&q=',
-    usps: 'https://www.usps.com/search/?q=',
-    washingtonpost: 'https://www.washingtonpost.com/newssearch/?query=',
-    steampowered: 'https://store.steampowered.com/search/?term=',
-    lowes: 'https://www.lowes.com/search?searchTerm=',
-    irs: 'https://www.irs.gov/search/all?keywords=',
-    yahoofinance: 'https://finance.yahoo.com/quote/',
-    forbes: 'https://www.forbes.com/search/?q=',
-    spotify: 'https://open.spotify.com/search/',
-    allrecepies: 'https://www.allrecipes.com/search?q=',
-    genius: 'https://genius.com/search?q=',
-    foxnews: 'https://www.foxnews.com/search-results/search?q=',
-    usnews: 'https://www.usnews.com/search?q=',
-    urbandictionary: 'https://www.urbandictionary.com/define.php?term=',
-    medicalnewstoday: 'https://www.medicalnewstoday.com/search?q=',
-    usatoday: 'https://www.usatoday.com/search/?q=',
-    msn: 'https://www.msn.com/en-us/search?q=',
-    yahoo: 'https://www.yahoo.com/search/?p=',
-    mayoclinic: 'https://www.mayoclinic.org/search/search-results?q=',
-    dictionary: 'https://www.dictionary.com/browse/',
-    businessinsider: 'https://www.businessinsider.com/s?q=',
-    britannica: 'https://www.britannica.com/search?query=',
-    mapquest: 'https://www.mapquest.com/search/results?query=',
-    weather: 'https://weather.com/search/enhancedlocalsearch?where=',
-    netflix: 'https://www.netflix.com/search?q=',
-    rottentomatoes: 'https://www.rottentomatoes.com/search?search=',
-    quora: 'https://www.quora.com/search?q=',
-    homedepot: 'https://www.homedepot.com/s/',
-    target: 'https://www.target.com/s?searchTerm=',
-    gamepedia: 'https://www.fandom.com/?s=',
-    merriamwebster: 'https://www.merriam-webster.com/dictionary/',
-    cnn: 'https://www.cnn.com/search/?size=10&q=',
-    newyorktimes: 'https://www.nytimes.com/search?query=',
-    webmd: 'https://www.webmd.com/search/search_results/default.aspx?query=',
-    espn: 'https://www.espn.com/search/_/q/',
-    indeed: 'https://www.indeed.com/jobs?q=',
-    etsy: 'https://www.etsy.com/search?q=',
-    healthline: 'https://www.healthline.com/search?q=',
-    googleplay: 'https://play.google.com/store/search?q=',
-    linkedin: 'https://www.linkedin.com/search/results/all/?keywords=',
-    ebay: 'https://www.ebay.com/sch/i.html?_nkw=',
-    walmart: 'https://www.walmart.com/search/?query=',
-    instagram: 'https://www.instagram.com/explore/tags/',
-    tripadvisor: 'https://www.tripadvisor.com/Search?q=',
-    pinterest: 'https://www.pinterest.com/search/pins/?q=',
-    fandom: 'https://www.fandom.com/?s=',
-    reddit: 'https://www.reddit.com/search/?q=',
-    yelp: 'https://www.yelp.com/search?find_desc=',
-    twitter: 'https://twitter.com/search?q=',
-    youtube: 'https://www.youtube.com/results?search_query=',
-    depositphotos: 'https://depositphotos.com/stock-photos/',
-    makeuseof: 'https://www.makeuseof.com/search/',
-    biblegateway: 'https://www.biblegateway.com/quicksearch/?quicksearch=',
-    cbsnews: 'https://www.cbsnews.com/search/?q=',
-    thehindu: 'https://www.thehindu.com/search/?q=',
-    xdadevelopers: 'https://www.xda-developers.com/search/?q=',
-    myntra: 'https://www.myntra.com/',
-    marketwatch: 'https://www.marketwatch.com/search?q=',
-    curseforge: 'https://www.curseforge.com/search?search=',
-    spectrum: 'https://www.spectrum.net/search-results?k=',
-    dw: 'https://www.dw.com/search/?searchNavigationId=9097&languageCode=en&origin=gN&item=',
-    pcgamer: 'https://www.pcgamer.com/search/?searchTerm=',
-    epicgames: 'https://store.epicgames.com/browse?q=',
-    audible: 'https://www.audible.com/search?keywords='
-  };
-  
-  const lowerCaseSearchTerm = searchTerm.toLowerCase();
-  
-  for (const prefix in searchEngines) {
-    if (lowerCaseSearchTerm.startsWith(`!${prefix} `)) {
-      const searchURL = searchEngines[prefix];
-      const searchQuery = searchTerm.substring(prefix.length + 2);
-      window.location.href = `${searchURL}${encodeURIComponent(searchQuery)}`;
-      return;
-    }
-  }
-  
-  let apiCache = {};
-  
-  function fetchWikipediaSummary(searchTerm) {
-    const apiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/';
-  
-    if (apiCache[searchTerm]) {
-      displaySummary(apiCache[searchTerm]);
-    } else {
-      fetch(apiUrl + encodeURIComponent(searchTerm))
-        .then(response => {
-          if (!response.ok && response.status !== 404) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if(data.type === 'standard') {
-            apiCache[searchTerm] = data;
-            displaySummary(data);
-          } else if(data.type === 'disambiguation') {
-            console.log('The term is ambiguous. Please specify your search.');
-          } else {
-            console.log("No summary available for this term");
-          }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-  }  
-  
-  function displaySummary(data) {
-    if (!data || !data.extract) {
-        console.error('Invalid data or extract is missing');
-        return;
-    }
 
-    const containerEl = document.createElement('div');
-    containerEl.id = 'wikipedia-container';
-  
-    const titleEl = document.createElement('h2');
-    titleEl.id = 'title';
-    titleEl.innerText = data.title;
-  
-    const contentEl = document.createElement('p');
-    contentEl.id = 'content';
-    const summary = data.extract.slice(0, 750) + '...';
-    contentEl.innerText = summary;
-  
-    const linkEl = document.createElement('a');
-    linkEl.id = 'link';
-    linkEl.innerText = 'Wikipedia';
-    linkEl.href = data.content_urls.desktop.page;
-    linkEl.target = '_blank';
-  
-    contentEl.appendChild(document.createTextNode(' '));
-    contentEl.appendChild(linkEl);
-  
-    if (data.thumbnail) {
-      const imageContainer = document.createElement('div');
-      imageContainer.id = 'image-container';
-  
-      const imageEl = document.createElement('img');
-      imageEl.id = 'image';
-      imageEl.src = data.thumbnail.source;
-      imageEl.alt = data.title;
-  
-      imageContainer.appendChild(imageEl);
-      containerEl.appendChild(imageContainer);
-    }
-  
-    containerEl.appendChild(titleEl);
-    containerEl.appendChild(contentEl);
-  
-    insertBefore(containerEl, document.getElementById('search-results'));
-  
-    const assistantResponseBox = document.getElementById('assistant-response-box');
-    insertAfter(containerEl, assistantResponseBox);
-  }
-  
-  fetchWikipediaSummary(searchTerm);
-  
-  const resultsTable = document.getElementById('search-results');
-  
   async function send_prompt_to_server(prompt) {
     const data = {
       prompt: prompt
     };
-  
+
     const response = await fetch("imageserver.php", {
       method: "POST",
       headers: {
@@ -305,160 +133,240 @@ document.title = `${searchTerm} - Beamo`;
       },
       body: JSON.stringify(data),
     });
-  
+
     return await response.json();
   }
-  
-  let requestIsInProgress = false;
-  
-  async function main(searchedTerm) {
-    if (requestIsInProgress) return;
-    
-    if (/^(create|make) (a picture|an? image|a photo) of /i.test(searchedTerm)) {
-      searchedTerm = searchedTerm.replace(/^(create|make) (a picture|an? image|a photo) of /i, "");
-      requestIsInProgress = true;
-      const serverResponse = await send_prompt_to_server(searchedTerm);
-      requestIsInProgress = false;
-  
-      if (serverResponse.status === "success") {
-        const imageUrl = serverResponse.image_url;
-        displayImage(imageUrl, searchedTerm);
-      } else {
-        alert('There was an error generating the image. Please try again later.');
-      }
-    } else {
-      const response = await fetch();
-      const data = await response.json();
-      const searchResults = data.webPages ? data.webPages.value : [];
-  
-      if (searchResults.length === 0) {
-        const noResults = document.createElement("p");
-        noResults.textContent = "No results found.";
-        resultsTable.parentNode.insertBefore(noResults, resultsTable);
-      } else {
-        searchResults.forEach((result) => {
-          const row = document.createElement("tr");
-          const nameCell = document.createElement("td");
-          const link = document.createElement("a");
-          link.href = result.url;
-          link.textContent = result.name;
-          nameCell.appendChild(link);
-          row.appendChild(nameCell);
-          resultsTable.appendChild(row);
-        });
-      }
-    }
+
+  function showLoader() {
+    const loader = document.createElement('img');
+    loader.className = 'loading-image loader-style';
+    loader.src = 'loading.webp';
+    document.body.appendChild(loader);
   }
   
+  function hideLoader() {
+      const loader = document.querySelector('.loading-image');
+      if (loader) {
+          loader.parentNode.removeChild(loader);
+      }
+  }
+
   function displayImage(imageUrl, searchedTerm) {
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.alt = `Image of ${searchedTerm}`;
-    img.style.width = '50%';
-    img.style.height = 'auto';
-    img.style.display = 'block';
-    img.style.marginLeft = 'auto';
-    img.style.marginRight = 'auto';
-    img.style.marginTop = '2.5vh';
-    img.style.marginBottom = '1vh';
-    img.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)';
-    img.style.borderRadius = '4px';
-    img.classList.add('fade-in-top');
-    if (resultsTable.firstChild) {
-      resultsTable.insertBefore(img, resultsTable.firstChild);
-    } else {
-      resultsTable.appendChild(img);
+    new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageUrl;
+    }).then(() => {
+      const img = document.createElement('img');
+      img.src = imageUrl;
+      img.alt = `Image of ${searchedTerm}`;
+      img.classList.add('image-style', 'fade-in-top', 'bounce-animation');
+      document.body.appendChild(img);
+      hideLoader();
+    });
+  }
+
+  async function main(searchedTerm) {
+    try {
+      if (requestIsInProgress) return;
+
+      if (/^(create|make|generate|produce|draw|paint|design|craft|show me) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i.test(searchedTerm)) {
+        searchedTerm = searchedTerm.replace(/^(create|make|generate|produce|draw|paint|design|craft|show me) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i, "");
+        requestIsInProgress = true;
+        const assistantResponseBox = document.getElementById('assistant-response-box');
+        assistantResponseBox.style.display = 'none';
+        showLoader();
+        const serverResponse = await send_prompt_to_server(searchedTerm);
+        requestIsInProgress = false;
+
+        if (serverResponse.status === "success") {
+          const imageUrl = serverResponse.image_url;
+          displayImage(imageUrl, searchedTerm);
+        } else {
+          alert('There was an error generating the image. Please try again later.');
+          hideLoader();
+        }
+            } else if (/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i.test(searchTerm)) {
+              let url = searchTerm.match(/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i)[0];
+              if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+              }
+              window.location.href = url;
+            } else if (/weather|forecast|temperature|rain|snow|storm|what'?s the weather|current weather|weather today|weekend weather|weather report|is it going to rain|will it snow|storm prediction|temperature today|temperature tomorrow/i.test(searchTerm)) {
+            const redirectToWeatherForecast = async () => {
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(async position => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        window.location.href = `https://weather.com/weather/today/l/${latitude},${longitude}`;
+                    }, error => {
+                        console.error('Geolocation error:', error);
+                    });
+                } else {
+                    console.log("Geolocation is not supported by this browser.");
+                }
+            };
+            redirectToWeatherForecast();
+          }
+            if (words.length <= 2) {
+              const assistantResponseBox = document.getElementById('assistant-response-box');
+              assistantResponseBox.style.display = 'none';
+            }
+    } catch (error) {
+      requestIsInProgress = false;
+      hideLoader();
     }
   }
-  
-  main(searchTerm);
-  
-  let currentPage = 0;
-  let requestInProgress = false;
-  let isImageSearch = false;
-  let isNewsSearch = false;
-  let isVideoSearch = false;
-  let isWeatherSearch = false;
-  
-  function showSkeletonLoader() {
-    const skeletonLoader = document.createElement('div');
-    skeletonLoader.id = 'skeletonLoader';
-    skeletonLoader.classList.add('skeleton-loader');
-    resultsTable.appendChild(skeletonLoader);
-  }
-  
-  function hideSkeletonLoader() {
-    const skeletonLoader = document.getElementById('skeletonLoader');
-    if (skeletonLoader) {
-      skeletonLoader.remove();
+
+  async function fetchAssistantResponse(searchTerm, onUpdate) {
+      if (/^(create|make|generate|produce|draw|paint|design|craft) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i.test(searchTerm)) {
+      return null;
+    } else if (/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i.test(searchTerm)) {
+      return null;
+    } else if (/weather|forecast|temperature|rain|snow|storm|what'?s the weather|current weather|weather today|weekend weather|weather report|is it going to rain|will it snow|storm prediction|temperature today|temperature tomorrow/i.test(searchTerm)) {
+      return null;
     }
+      if (words.length <= 2) {
+      return null;
+    }
+
+    while (searchresultstable.length < 2) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    const resultsToSend = searchresultstable.slice(0, 5);
+
+    const encodedSearchResults = encodeURIComponent(JSON.stringify(resultsToSend));
+
+    const cachedResponse = sessionStorage.getItem(`response-${searchTerm}`);
+    if (cachedResponse) {
+      assistantresponse = cachedResponse;
+      const assistantResponseBox = document.getElementById("assistant-response-box");
+      assistantResponseBox.innerHTML = cachedResponse;
+      if (typeof onUpdate === "function") {
+        onUpdate(cachedResponse, resultsToSend);
+      }
+      return Promise.resolve(cachedResponse);
+    }
+
+    const eventSource = new EventSource(`summary.php?searchTerm=${encodeURIComponent(searchTerm)}&searchResults=${encodedSearchResults}`);
+    let result = "";
+
+    let cycle = 1;
+    let firstChunkReceived = false;
+    let timer = setInterval(() => {
+      if (!firstChunkReceived) {
+        let text = ".".repeat(cycle);
+        try {
+          if (typeof onUpdate === "function") {
+            onUpdate(text || ".", resultsToSend);
+          }
+        } catch {}
+        cycle = (cycle % 3) + 1;
+      }
+    }, 100);
+
+    const connectionTimeout = setTimeout(() => {
+      eventSource.close();
+      clearInterval(timer);
+      throw new Error('Connection timeout');
+    }, 10000);
+
+    return new Promise((resolve, reject) => {
+      eventSource.onmessage = (event) => {
+        try {
+          clearTimeout(connectionTimeout);
+          clearInterval(timer);
+
+          const jsonString = event.data.replace(/^data:\s*/, '');
+          let data = JSON.parse(jsonString);
+
+          if (!isValidJson(jsonString)) {
+            return;
+          }
+
+          if (data.timeZone) {
+            eventSource.close();
+            resolve(null);
+            return;
+          }
+
+          if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
+            const content = data.choices[0].delta.content;
+            result += content;
+            assistantresponse = result;
+            firstChunkReceived = true;
+            try {
+              if (typeof onUpdate === "function") {
+                onUpdate(result, resultsToSend);
+              }
+            } catch {}
+          } else if (data.finish_reason) {
+            sessionStorage.setItem(`response-${searchTerm}`, result);
+            const assistantResponseBox = document.getElementById("assistant-response-box");
+            assistantResponseBox.innerHTML = result;
+            resolve(result);
+          }
+        } catch (e) {
+            }
+          };
+
+      eventSource.onerror = (error) => {
+        clearTimeout(connectionTimeout);
+        clearInterval(timer);
+        eventSource.close();
+        reject(error);
+      };
+    });
   }
-  
-  let cache = JSON.parse(sessionStorage.getItem('apiData')) || {};
-  
-  function fetchResults(offset = 0, searchType = 'web') {
-    function tryFetch(apiRequestUrl) {
+
+  function fetchResults(offset, searchType = 'web') {
+  async function tryFetch(apiRequestUrl) {
       if (requestInProgress) {
         return;
       }
+    
       requestInProgress = true;
-
+    
       let cache = sessionStorage.getItem('apiData');
+    
       if (cache) {
         cache = JSON.parse(cache);
       } else {
         cache = {};
       }
-
+    
       if (cache[apiRequestUrl]) {
-        console.log('Data loaded from cache');
         processResults(cache[apiRequestUrl]);
         requestInProgress = false;
       } else {
-        fetch(apiRequestUrl)
-          .then(response => {
-            if (response.status === 404) {
-              window.location.href = 'notfound.html';
-            } else if (!response.ok) {
-              throw new Error('API request failed');
-            } else {
-              const contentType = response.headers.get("content-type");
-              if (contentType && contentType.includes("application/json")) {
-                return response.json();
-              } else {
-                throw new TypeError("Response from API was not JSON");
-              }
-            }
-          })
-          .then(data => {
-            console.log('Data loaded from API');
-            processResults(data);
-
-            cache[apiRequestUrl] = data;
-            sessionStorage.setItem('apiData', JSON.stringify(cache));
-            requestInProgress = false;
-          })
-          .catch(error => {
-            console.error('API request failed:', error);
-            requestInProgress = false;
-          });
+        try {
+          const response = await fetch(apiRequestUrl);
+          if (response.status === 404) {
+            window.location.href = 'notfound.html';
+            return;
+          } else if (!response.ok) {
+            throw new Error('API request failed');
+          }
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new TypeError("Response from API was not JSON");
+          }
+          const data = await response.json();
+          processResults(data);
+          cache[apiRequestUrl] = data;
+          sessionStorage.setItem('apiData', JSON.stringify(cache));
+        } catch (error) {
+          console.error('API request failed:', error);
+        } finally {
+          requestInProgress = false;
+        }
       }
-    }
-
-    function safeEval(expression) {
-      const isSafe = /^[\d\s+\-*/()]+$/.test(expression);
-      if (!isSafe) throw new Error('Invalid expression');
-      let balance = 0;
-      for (const char of expression) {
-          if (char === '(') balance++;
-          if (char === ')') balance--;
-          if (balance < 0) throw new Error('Invalid expression');
-      }
-      if (balance !== 0) throw new Error('Invalid expression');
-      return eval(expression);
   }
   
-  function generateCalculator() {
+  async function search() {
+    function generateCalculator() {
       const calculatorContainer = document.getElementById('calculator-container');
       calculatorContainer.innerHTML = '';
       const display = document.createElement('div');
@@ -487,6 +395,7 @@ document.title = `${searchTerm} - Beamo`;
           buttonRow.forEach((buttonValue, colIndex) => {
               const button = document.createElement('button');
               button.textContent = buttonValue;
+              button.style.cursor = 'pointer';
               button.addEventListener('mousedown', function() {
                   this.classList.add('active');
               });
@@ -496,7 +405,7 @@ document.title = `${searchTerm} - Beamo`;
               button.addEventListener('click', function() {
                   if (buttonValue === '=') {
                       try {
-                          display.textContent = safeEval(display.textContent);
+                          display.textContent = Function('"use strict";return (' + display.textContent + ')')();
                       } catch {
                           display.textContent = "Error";
                       }
@@ -526,7 +435,7 @@ document.title = `${searchTerm} - Beamo`;
                   display.textContent = '';
               } else if (key === 'Enter') {
                   try {
-                      display.textContent = safeEval(display.textContent);
+                      display.textContent = Function('"use strict";return (' + display.textContent + ')')();
                   } catch {
                       display.textContent = "Error";
                   }
@@ -535,49 +444,118 @@ document.title = `${searchTerm} - Beamo`;
               }
           }
       });
-  }
-  
-  async function search() {
-    showSkeletonLoader();
-    let apiRequestUrl = `api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}&searchType=${searchType}`;
-    tryFetch(apiRequestUrl);
+    }
+
+    function isValidMathExpression(expression) {
+      let isValid = /^[\d+\-*/\(\)\.]+$/.test(expression);
+      if (isValid) {
+          try {
+              eval(expression);
+          } catch {
+              isValid = false;
+          }
+      }
+      return isValid;
+    }
+
+    async function sendRequestWithGeoData(searchTerm, latitude, longitude) {
+      let apiRequestUrl = `api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`;
+      if (typeof tryFetch === 'function') {
+        await tryFetch(apiRequestUrl);
+      }
+    }
+    
+    async function sendRequestWithIP(searchTerm) {
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      let ipData = await ipResponse.json();
+    
+      localStorage.setItem('ipData', JSON.stringify(ipData));
+      localStorage.setItem('ipDataTime', Date.now());
+    
+      let apiRequestUrl = `api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&userIp=${encodeURIComponent(ipData.ip)}`;
+      if (typeof tryFetch === 'function') {
+        await tryFetch(apiRequestUrl);
+      }
+    }
     let searchTermWithoutSpaces = searchTerm.replace(/\s+/g, '');
-
+  
     let calculatorContainer = document.getElementById('calculator-container');
-
-    if (searchTermWithoutSpaces === 'calculator' || isValidMathExpression(searchTermWithoutSpaces)) {
+  
+    const handleCalculator = () => {
+      if (searchTermWithoutSpaces === 'calculator' || isValidMathExpression(searchTermWithoutSpaces)) {
         calculatorContainer.style.display = 'grid';
         generateCalculator();
-
-        if (isValidMathExpression(searchTermWithoutSpaces)) {
-            let calculatorDisplay = document.getElementById('calculator-display');
-            try {
-                calculatorDisplay.textContent = eval(searchTermWithoutSpaces);
-            } catch (error) {
-                calculatorDisplay.textContent = 'Error';
-            }
-        }
-    } else {
-        calculatorContainer.style.display = 'none';
-    }
-}
-
-function isValidMathExpression(expression) {
-    let isValid = /^[\d+\-*/\(\)\.]+$/.test(expression);
-    if (isValid) {
-        try {
-            eval(expression);
-        } catch {
-            isValid = false;
-        }
-    }
-    return isValid;
-}
   
+        if (isValidMathExpression(searchTermWithoutSpaces)) {
+          let calculatorDisplay = document.getElementById('calculator-display');
+          try {
+            calculatorDisplay.textContent = eval(searchTermWithoutSpaces);
+          } catch (error) {
+            calculatorDisplay.textContent = 'Error';
+          }
+        }
+      } else {
+        calculatorContainer.style.display = 'none';
+      }
+    };
+  
+    const handleGeoLocationRequest = async () => {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(position => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+  
+          localStorage.setItem('latitude', latitude);
+          localStorage.setItem('longitude', longitude);
+          localStorage.setItem('geoDataTime', Date.now());
+  
+          resolve({ latitude, longitude });
+        }, error => {
+          console.error('Geolocation error:', error);
+          reject(error);
+        });
+      });
+    };
+  
+    const handleSearchRequest = async () => {
+      if (!/^(create|make|generate|produce|draw|paint|design|craft|show me) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i.test(searchTerm) && !/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i.test(searchTerm) && !/weather|forecast|temperature|rain|snow|storm|what'?s the weather|current weather|weather today|weekend weather|weather report|is it going to rain|will it snow|storm prediction|temperature today|temperature tomorrow/i.test(searchTerm)) {
+        
+        const startTime = performance.now();
+  
+        let latitude = localStorage.getItem('latitude');
+        let longitude = localStorage.getItem('longitude');
+        let geoDataTime = localStorage.getItem('geoDataTime');
+  
+        if (latitude && longitude && geoDataTime && (Date.now() - geoDataTime < 2 * 60 * 60 * 1000)) {
+          await sendRequestWithGeoData(searchTerm, latitude, longitude);
+        } else if ('geolocation' in navigator) {
+          try {
+            const position = await handleGeoLocationRequest();
+            await sendRequestWithGeoData(searchTerm, position.latitude, position.longitude);
+          } catch (error) {
+            await sendRequestWithIP(searchTerm);
+          }
+        } else {
+          await sendRequestWithIP(searchTerm);
+        }
+  
+        const endTime = performance.now();
+        console.log(`Search request time: ${endTime - startTime}ms`);
+      }
+    };
+  
+    handleCalculator();
+    await handleSearchRequest();
+  }
+
+  function processResults(data) {
+
+    resultsTable.innerHTML = '';
+
     function displayRelatedSearches(relatedSearches) {
       const relatedSearchesContainer = document.getElementById('related-searches-container');
       relatedSearchesContainer.innerHTML = '';
-  
+
       if (relatedSearches) {
           for (let i = 0; i < relatedSearches.length; i++) {
               let relatedSearch = relatedSearches[i];
@@ -593,298 +571,50 @@ function isValidMathExpression(expression) {
           }
       }
   }
-  
-  function processResults(data) {
-    console.log(data);
-    resultsTable.innerHTML = '';
-    hideSkeletonLoader();
-    const content = document.getElementById('content');
-    const definitionContainer = document.getElementById('definition-container');
-    const assistantResponseBox = document.getElementById('assistant-response-box');
-    const WikipediaContainer = document.getElementById('wikipedia-container');
-    const timezoneContainer = document.getElementById('timezone-container');
 
     if (data.relatedSearches) {
         displayRelatedSearches(data.relatedSearches.value);
     }
+if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
+  isAllSearch = true;
+  const searchResults = document.getElementById('search-results');
+  const pagination = document.getElementById('pagination');
+  const content = document.getElementById('content');
+  const relatedSearchesContainer = document.getElementById('related-searches-container');
+  const newsGrid = document.getElementById('newsGrid');
+  const videoGrid = document.getElementById('videoGrid');
+  const timezoneContainer = document.getElementById('timezone-container');
+  const imageGrid = document.getElementById('imageGrid');
 
-    if (data.timeZone) {
-        timezoneContainer.style.display = 'block';
-        timezoneContainer.innerHTML = '';
-        const divRow = document.createElement('div');
-        const timeZone = document.createElement('div');
-  
-        let descriptionText;
-        let formattedTime;
-        if (data.timeZone.primaryCityTime) {
-            const date = new Date(data.timeZone.primaryCityTime.time);
-            let hours = date.getUTCHours();
-            const minutes = ("0" + date.getUTCMinutes()).substr(-2);
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            formattedTime = hours + ':' + minutes + ' ' + ampm;
-            descriptionText = `The time in ${data.timeZone.primaryCityTime.location} right now is `;
-        } else if (data.timeZone.primaryResponse) {
-            descriptionText = data.timeZone.description;
-            if (!descriptionText.includes(data.timeZone.primaryResponse)) {
-                formattedTime = data.timeZone.primaryResponse;
-            }
-        }
-  
-        const textPart1 = document.createElement('span');
-        textPart1.textContent = descriptionText;
-        textPart1.style.fontSize = '1.5em';
-  
-        const textPart2 = document.createElement('strong');
-        if (formattedTime) {
-            textPart2.textContent = `${formattedTime}.`;
-        }
-        textPart2.style.fontSize = '2em';
-  
-        timeZone.appendChild(textPart1);
-        if (formattedTime) {
-            timeZone.appendChild(textPart2);
-        }
-  
-        divRow.appendChild(timeZone);
-        timezoneContainer.appendChild(divRow);
-        assistantResponseBox.style.display = 'none';
-    }
-  
-  function displayWeatherData(data) {
-      const weatherContainer = document.getElementById('weather-container');
-      let isImperial = (data.location.country === 'United States of America' || data.location.country === 'Myanmar' || data.location.country === 'Liberia');
-  
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      if (data && data.current) {
-          weatherContainer.classList.remove('hidden');
-          while (weatherContainer.firstChild) {
-              weatherContainer.firstChild.remove();
-          }
-  
-          const currentWeatherDiv = document.createElement('div');
-          currentWeatherDiv.className = 'current-weather';
-          weatherContainer.appendChild(currentWeatherDiv);
-  
-          const weatherIcon = document.createElement('img');
-          weatherIcon.className = 'weather-icon';
-          weatherIcon.src = data.current.condition.icon;
-          currentWeatherDiv.appendChild(weatherIcon);
-  
-          const temperatureDiv = document.createElement('div');
-          temperatureDiv.className = 'temperature';
-          currentWeatherDiv.appendChild(temperatureDiv);
-  
-          const feelsLikeDiv = document.createElement('div');
-          feelsLikeDiv.className = 'feels-like';
-          currentWeatherDiv.appendChild(feelsLikeDiv);
-  
-          updateTemperatures(isImperial, data, temperatureDiv, feelsLikeDiv);
-      }
-  
-      if (data && data.forecast) {
-          const nav = document.createElement('nav');
-          weatherContainer.appendChild(nav);
-  
-          const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  
-          data.forecast.forecastday.forEach((forecastDay, i) => {
-              const forecastDate = new Date(forecastDay.date);
-              forecastDate.setHours(0, 0, 0, 0);
-  
-              const forecastButton = document.createElement('button');
-              forecastButton.className = 'nav-button';
-  
-              const dayOfWeek = daysOfWeek[forecastDate.getDay()];
-  
-              const tempUnit = isImperial ? '°F' : '°C';
-              const highTemp = isImperial ? forecastDay.day.maxtemp_f : forecastDay.day.maxtemp_c;
-              const lowTemp = isImperial ? forecastDay.day.mintemp_f : forecastDay.day.mintemp_c;
-  
-              const forecastIcon = document.createElement('img');
-              forecastIcon.src = forecastDay.day.condition.icon;
-              forecastIcon.className = 'forecast-icon';
-              forecastButton.appendChild(forecastIcon);
-  
-              const forecastTempText = document.createElement('span');
-              forecastTempText.innerHTML = `${highTemp}${tempUnit} | ${lowTemp}${tempUnit}`;
-              forecastButton.appendChild(forecastTempText);
-  
-              const forecastDayText = document.createElement('h3');
-              forecastDayText.textContent = dayOfWeek;
-              forecastButton.appendChild(forecastDayText);
-  
-              forecastButton.setAttribute('data-target', `day${i + 1}`);
-              nav.appendChild(forecastButton);
-  
-              const forecastSection = document.createElement('section');
-              forecastSection.id = `day${i + 1}`;
-              forecastSection.className = 'weather-section hidden';
-              weatherContainer.appendChild(forecastSection);
-  
-              let forecastCount = 0;
-              forecastDay.hour.forEach((hour) => {
-                  const forecastHour = new Date(hour.time);
-                  if (forecastDate.getTime() === today.getTime() && forecastHour >= new Date() && forecastHour.getHours() % 3 === 0 && forecastCount < 7) {
-                      displayForecast(isImperial, hour, forecastSection);
-                      forecastCount++;
-                  } else if (forecastDate.getTime() !== today.getTime() && forecastHour.getHours() % 3 === 0 && forecastCount < 7) {
-                      displayForecast(isImperial, hour, forecastSection);
-                      forecastCount++;
-                  }
-              });
-          });
-  
-          Array.from(document.querySelectorAll('.nav-button')).forEach(button => {
-              button.addEventListener('click', () => {
-                  Array.from(document.querySelectorAll('.weather-section')).forEach(section => section.classList.add('hidden'));
-                  document.getElementById(button.getAttribute('data-target')).classList.remove('hidden');
-              });
-          });
-  
-          if (nav.firstElementChild) {
-              nav.firstElementChild.click();
-          }
-      }
+  videoGrid && (videoGrid.style.display = 'none');
+  timezoneContainer && (timezoneContainer.style.display = 'none');
+  content && (content.style.display = 'block');
+  relatedSearchesContainer && (relatedSearchesContainer.style.display = 'block');
+  searchResults && (searchResults.style.display = 'block');
+  pagination && (pagination.style.display = 'block');
+  newsGrid && (newsGrid.style.display = 'none');
+  imageGrid && (imageGrid.style.display = 'none');
+  if (assistantResponseBox && words.length > 2) {
+      assistantResponseBox.style.display = 'block';
   }
-  
-  function displayForecast(isImperial, hour, forecastSection) {
-      const hourDiv = document.createElement('div');
-      hourDiv.className = 'hour-weather';
-  
-      const hourTime = document.createElement('div');
-      let forecastHour = new Date(hour.time).getHours();
-      let period = forecastHour >= 12 ? 'PM' : 'AM';
-      let displayHour = forecastHour % 12 || 12;
-      hourTime.textContent = `${displayHour} ${period}`;
-      hourDiv.appendChild(hourTime);
-      hourDiv.appendChild(document.createElement('br'));
-  
-      const hourIcon = document.createElement('img');
-      hourIcon.src = hour.condition.icon;
-      hourIcon.className = 'hourly-forecast-icon';
-      hourDiv.appendChild(hourIcon);
-      hourDiv.appendChild(document.createElement('br'));
-  
-      const hourTemp = document.createElement('div');
-      hourTemp.textContent = isImperial ? `${hour.temp_f}°F` : `${hour.temp_c}°C`;
-      hourDiv.appendChild(hourTemp);
-      hourDiv.appendChild(document.createElement('br'));
-  
-      if (hour.chance_of_rain >= 10) {
-          const hourPrecipitation = document.createElement('div');
-          hourPrecipitation.textContent = `${hour.chance_of_rain}% 💧`;
-          hourDiv.appendChild(hourPrecipitation);
-          hourDiv.appendChild(document.createElement('br'));
-      }
-  
-      forecastSection.appendChild(hourDiv);
-  }
-  
-  function updateTemperatures(isImperial, data, temperatureDiv) {
-      const unit = isImperial ? '°F' : '°C';
-      const temp = isImperial ? data.current.temp_f : data.current.temp_c;
-  
-      temperatureDiv.textContent = `${temp}${unit}`;
-  }
-  
-  function fetchWeatherData(position, retryCount = 0) {
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
-    const apiType = 'forecast';
+  searchResults.style.marginTop = '3.5vh';
 
-    fetch(`api_request.php?apiType=${apiType}&lat=${lat}&lon=${lon}&days=7`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data && data.current && data.forecast) {
-                displayWeatherData(data);
-            } else {
-                throw new Error("Incomplete data");
-            }
-        })
-        .catch(error => {
-            console.error('There was an error!', error);
-            if (retryCount < 10) {
-                setTimeout(() => {
-                    console.log("Retrying fetch...", retryCount);
-                    fetchWeatherData(position, retryCount + 1);
-                }, 1000 * retryCount);
-            } else {
-                console.error('Failed to load data after 10 attempts');
-            }
-        });
-}
+  const maxConcurrentRequests = 20; 
+  const requestQueue = data.webPages.value.slice();
 
-const weatherContainer = document.getElementById('weather-container');
-
-const weatherRegex = /(what('?s| is) the weather|weather forecast|current weather|today('?s| is) weather)/i;
-
-if (weatherRegex.test(searchTerm) || searchTerm.trim().toLowerCase() === "weather") {
-    weatherContainer.classList.remove('hidden');
-    
-    navigator.permissions.query({name:'geolocation'})
-        .then(function(permissionStatus) {
-            if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
-                navigator.geolocation.getCurrentPosition(fetchWeatherData);
-                weatherContainer.style.display = 'flex';
-            } else {
-                console.error('Location permission denied');
-                weatherContainer.style.display = 'none';
-            }
-        });
-} 
-    if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
-      const searchResults = document.getElementById('search-results');
-      const pagination = document.getElementById('pagination');
-      const content = document.getElementById('content');
-      const relatedSearchesContainer = document.getElementById('related-searches-container');
-      const newsGrid = document.getElementById('newsGrid');
-      const videoGrid = document.getElementById('videoGrid');
-      const timezoneContainer = document.getElementById('timezone-container');
-      const imageGrid = document.getElementById('imageGrid');
-  
-      if (videoGrid) {
-        videoGrid.remove();
+  const processQueue = async () => {
+      if (requestQueue.length === 0) {
+          return;
       }
-      if (timezoneContainer) {
-        timezoneContainer.style.display = 'none';
-      }
-      if (content) {
-        content.style.display = 'block';
-      }
-      if (relatedSearchesContainer) {
-        relatedSearchesContainer.style.display = 'block';
-      }
-      if (searchResults) {
-        searchResults.style.visibility = 'visible';
-      }
-      if (pagination) {
-        pagination.style.visibility = 'visible';
-      }
-      if (newsGrid) {
-        newsGrid.remove();
-      }
-      if (imageGrid) {
-        imageGrid.remove();
-      }
-    const maxConcurrentRequests = 5;
-    const requestQueue = data.webPages.value.slice();
-    const processQueue = async () => {
-      if (requestQueue.length === 0) return;
       const currentBatch = requestQueue.splice(0, maxConcurrentRequests);
       const promises = currentBatch.map(result => processResult(result));
       await Promise.all(promises);
+      await processQueue();
       processQueue();
-    };
-    const processResult = async (result) => {
+  };
+
+  const processResult = async (result) => {
+    try {
       const divRow = document.createElement('div');
       const title = document.createElement('h3');
       const link = document.createElement('a');
@@ -916,397 +646,357 @@ if (weatherRegex.test(searchTerm) || searchTerm.trim().toLowerCase() === "weathe
       title.style.fontSize = '4';
       title.id = 'title';
       description.textContent = result.snippet.substr(0, 200) + '...';
+
+      const fullResult = {...result};
+      fullResult.snippet = result.snippet;
+
+      searchresultstable.push(fullResult);
+
       createPaginationButtons(data.webPages.totalEstimatedMatches);
-    };
-    processQueue();
-    let offset = 0;
-    } else if (isNewsSearch) {
-        const pagination = document.getElementById('pagination');
-        const relatedSearchesContainer = document.getElementById('related-searches-container');
-        if (pagination) {
-          pagination.style.visibility = 'hidden';
-        }
-        if (relatedSearchesContainer) {
-          relatedSearchesContainer.style.display = 'none';
-        }
-        const content = document.getElementById('content');
-        if (content) {
-          content.style.display = 'none';
-        }
-        const definitionContainer = document.getElementById('definition-container');
-        if (definitionContainer) {
-          definitionContainer.style.display = 'none';
-        }
-        const assistantResponseBox = document.getElementById('assistant-response-box');
-        if (assistantResponseBox) {
-          assistantResponseBox.style.display = 'none';
-        }
-        const WikipediaContainer = document.getElementById('WikipediaContainer');
-        if (WikipediaContainer) {
-          WikipediaContainer.style.display = 'none';
-        }
-        const timezoneContainer = document.getElementById('timezone-container');
-        if (timezoneContainer) {
-          timezoneContainer.style.display = 'none';
-        }
-        let newsGrid = document.getElementById('newsGrid');
-        if (!newsGrid) {
-          newsGrid = document.createElement('div');
-          newsGrid.id = 'newsGrid';
-          newsGrid.classList.add('news-grid');
-          newsGrid.style.gridGap = '0.25%';
-          document.body.appendChild(newsGrid);
-        }
-        data.value.forEach((newsItem) => {
-          const newsLink = document.createElement('a');
-          const newsContainer = document.createElement('div');
-          const newsContent = document.createElement('div');
-          const newsProvider = document.createElement('p');
-          const newsProviderIcon = document.createElement('img');
-          const newsTitle = document.createElement('h4');
-          const newsDescription = document.createElement('p');
-          const newsPublishedDate = document.createElement('p');
-          const newsThumbnail = document.createElement('img');
-    
-          newsLink.href = newsItem.url;
-          newsContainer.classList.add('news-container');
-          newsContent.classList.add('news-content');
-    
-          newsProviderIcon.src = `https://www.google.com/s2/favicons?domain=${new URL(newsItem.url).hostname}`;
-          newsProviderIcon.style.display = 'inline-block';
-          newsProviderIcon.style.marginRight = '0.5vw';
-          
-          newsProvider.textContent = newsItem.provider[0].name;
-          newsProvider.style.display = 'inline-block';
-          
-          newsProvider.prepend(newsProviderIcon);
-          
-          newsTitle.textContent = newsItem.name;
-          newsDescription.textContent = newsItem.description;
-          newsPublishedDate.textContent = new Date(newsItem.datePublished).toLocaleDateString();
-    
-          if(newsItem.image) {
-            newsThumbnail.src = newsItem.image.thumbnail.contentUrl;
-            newsThumbnail.classList.add('news-thumbnail');
-          }
-    
-          newsContent.appendChild(newsProvider);
-          newsContent.appendChild(newsTitle);
-          newsContent.appendChild(newsDescription);
-          newsContent.appendChild(newsPublishedDate);
-    
-          newsContainer.appendChild(newsContent);
-          if(newsItem.image) {
-            newsContainer.appendChild(newsThumbnail);
-          }
-          
-          newsLink.appendChild(newsContainer);
-          newsGrid.appendChild(newsLink);
-        });
-        const firstNewNews = newsGrid.querySelectorAll('.news-container')[offset];
-        if (firstNewNews) {
-          firstNewNews.scrollIntoView({ behavior: 'smooth' });
-          window.addEventListener('scroll', () => {
-            if (isNewsSearch && (window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
-              offset += data.value.length;
-              const apiRequestUrl = `api_request.php?apiType=news&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}&originalImg=${true}`;              
-              tryFetch(apiRequestUrl);
-            }
-          });      
-        }    
-      } else if (isVideoSearch) {
-        const relatedSearchesContainer = document.getElementById('related-searches-container');
-        if (relatedSearchesContainer) {
-          relatedSearchesContainer.style.display = 'none';
-        }
-        const content = document.getElementById('content');
-        if (content) {
-          content.style.display = 'none';
-        }
-        const assistantResponseBox = document.getElementById('assistant-response-box');
-        if (assistantResponseBox) {
-          assistantResponseBox.style.display = 'none';
-        }
-        const WikipediaContainer = document.getElementById('WikipediaContainer');
-        if (WikipediaContainer) {
-          WikipediaContainer.style.display = 'none';
-        }
-        const timezoneContainer = document.getElementById('timezone-container');
-        if (timezoneContainer) {
-          timezoneContainer.style.display = 'none';
-        }
-        const definitionContainer = document.getElementById('definition-container');
-        if (definitionContainer) {
-          definitionContainer.style.display = 'none';
-        }
-        const pagination = document.getElementById('pagination');
-        if (pagination) {
-          pagination.style.display = 'none';
-        }
-let videoGrid = document.getElementById('videoGrid');
-if (!videoGrid) {
-  videoGrid = document.createElement('div');
-  videoGrid.id = 'videoGrid';
-  videoGrid.classList.add('video-grid');
-  document.body.appendChild(videoGrid);
-}
-data.value.forEach((videoItem) => {
-  const videoLink = document.createElement('a');
-  const videoContainer = document.createElement('div');
-  const videoContent = document.createElement('div');
-  const videoProvider = document.createElement('p');
-  const videoTitle = document.createElement('h4');
-  const videoDescription = document.createElement('p');
-  const videoThumbnail = document.createElement('img');
-  const videoDatePublished = document.createElement('p');
-  const videoViewCount = document.createElement('p');
-
-  videoLink.href = videoItem.hostPageUrl;
-  videoContainer.classList.add('news-container');
-  videoContent.classList.add('news-content');
-
-  videoProvider.textContent = videoItem.publisher[0].name;
-  videoTitle.textContent = videoItem.name;
-  videoDescription.textContent = videoItem.description;
-  videoDatePublished.textContent = new Date(videoItem.datePublished).toLocaleDateString();
-  videoViewCount.textContent = `${videoItem.viewCount} Views`;
-
-  if(videoItem.thumbnailUrl) {
-    videoThumbnail.src = videoItem.thumbnailUrl;
-    videoThumbnail.classList.add('news-thumbnail');
-  }
-
-  videoContent.appendChild(videoProvider);
-  videoContent.appendChild(videoTitle);
-  videoContent.appendChild(videoDescription);
-  videoContent.appendChild(videoDatePublished);
-  videoContent.appendChild(videoViewCount);
-
-  videoContainer.appendChild(videoContent);
-  if(videoItem.thumbnailUrl) {
-    videoContainer.appendChild(videoThumbnail);
-  }
-  
-  videoLink.appendChild(videoContainer);
-  videoGrid.appendChild(videoLink);
-});
-const firstNewVideos = videoGrid.querySelectorAll('.news-container')[offset];
-if (firstNewVideos) {
-  firstNewVideos.scrollIntoView({ behavior: 'smooth' });
-  window.addEventListener('scroll', () => {
-    if (isVideoSearch && (window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
-      offset += data.value.length;
-      const apiRequestUrl = `api_request.php?apiType=videos&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;           
-      tryFetch(apiRequestUrl);
+    } catch (error) {
+      if (error.status !== 404) {
+      }
     }
-  });      
-}  
-} else if (isImageSearch) {
-  const pagination = document.getElementById('pagination');
-  const newsGrid = document.getElementById('newsGrid');
-  const videoGrid = document.getElementById('videoGrid');
-  const timezoneContainer = document.getElementById('timezone-container');
+  };   
+  
+  processQueue();
 
-  if (pagination) {
-    pagination.style.visibility = 'hidden';
+} else if (isNewsSearch) {
+  clearAll();
+  searchbutton.classList.remove('blueunderline');
+  chatbutton.classList.remove('blueunderline');
+  imagebutton.classList.remove('blueunderline');
+  videobutton.classList.remove('blueunderline');
+  newsbutton.classList.add('blueunderline');
+  readytoloadmore = false;
+  let newsGrid = document.getElementById('newsGrid');
+
+  const createNewsItem = async (newsItem) => {
+    const newsLink = document.createElement('a');
+    const newsContainer = document.createElement('div');
+    const newsContent = document.createElement('div');
+    const newsProvider = document.createElement('p');
+    const newsProviderIcon = document.createElement('img');
+    const newsTitle = document.createElement('h4');
+    const newsDescription = document.createElement('p');
+    const newsPublishedDate = document.createElement('p');
+    const newsThumbnail = document.createElement('img');
+
+    newsLink.href = newsItem.url;
+    newsContainer.classList.add('news-container');
+    newsContent.classList.add('news-content');
+
+    newsProviderIcon.src = `https://www.google.com/s2/favicons?domain=${new URL(newsItem.url).hostname}`;
+    newsProviderIcon.style.display = 'inline-block';
+    newsProviderIcon.style.marginRight = '0.5vw';
+
+    newsProvider.textContent = newsItem.provider[0].name;
+    newsProvider.style.display = 'inline-block';
+
+    newsProvider.prepend(newsProviderIcon);
+
+    newsTitle.textContent = newsItem.name;
+    newsDescription.textContent = newsItem.description;
+    newsPublishedDate.textContent = new Date(newsItem.datePublished).toLocaleDateString();
+
+    if (newsItem.image) {
+      newsThumbnail.src = newsItem.image.thumbnail.contentUrl;
+      newsThumbnail.classList.add('news-thumbnail');
+    }
+
+    newsContent.appendChild(newsProvider);
+    newsContent.appendChild(newsTitle);
+    newsContent.appendChild(newsDescription);
+    newsContent.appendChild(newsPublishedDate);
+
+    newsContainer.appendChild(newsContent);
+    if (newsItem.image) {
+      newsContainer.appendChild(newsThumbnail);
+    }
+
+    newsLink.appendChild(newsContainer);
+    return newsLink;
+  };
+
+  if (!newsGrid) {
+    newsGrid = document.createElement('div');
+    newsGrid.id = 'newsGrid';
+    newsGrid.classList.add('news-grid');
+    newsGrid.style.gridGap = '0.25%';
+    document.body.appendChild(newsGrid);
+
+    Promise.all(data.value.map(newsItem => createNewsItem(newsItem)))
+      .then(newsElements => {
+        newsElements.forEach(newsElement => newsGrid.appendChild(newsElement));
+      });
+  } else {
+    newsGrid.style.display = 'block';
+  } 
+} else if (isVideoSearch) {
+  clearAll();
+  searchbutton.classList.remove('blueunderline');
+  chatbutton.classList.remove('blueunderline');
+  imagebutton.classList.remove('blueunderline');
+  newsbutton.classList.remove('blueunderline');
+  videobutton.classList.add('blueunderline');
+  readytoloadmore = false;
+  let videoGrid = document.getElementById('videoGrid');
+
+  const createVideoItem = async (videoItem) => {
+    const videoLink = document.createElement('a');
+    const videoContainer = document.createElement('div');
+    const videoContent = document.createElement('div');
+    const videoProvider = document.createElement('p');
+    const videoTitle = document.createElement('h4');
+    const videoDescription = document.createElement('p');
+    const videoThumbnail = document.createElement('img');
+    const videoDatePublished = document.createElement('p');
+    const videoViewCount = document.createElement('p');
+
+    videoLink.href = videoItem.hostPageUrl;
+    videoContainer.classList.add('news-container');
+    videoContent.classList.add('news-content');
+
+    videoProvider.textContent = videoItem.publisher[0].name;
+    videoTitle.textContent = videoItem.name;
+    videoDescription.textContent = videoItem.description;
+    videoDatePublished.textContent = new Date(videoItem.datePublished).toLocaleDateString();
+    videoViewCount.textContent = `${videoItem.viewCount} Views`;
+
+    if (videoItem.thumbnailUrl) {
+      videoThumbnail.src = videoItem.thumbnailUrl;
+      videoThumbnail.classList.add('news-thumbnail');
+    }
+
+    videoContent.appendChild(videoProvider);
+    videoContent.appendChild(videoTitle);
+    videoContent.appendChild(videoDescription);
+    videoContent.appendChild(videoDatePublished);
+    videoContent.appendChild(videoViewCount);
+
+    videoContainer.appendChild(videoContent);
+    if (videoItem.thumbnailUrl) {
+      videoContainer.appendChild(videoThumbnail);
+    }
+
+    videoLink.appendChild(videoContainer);
+    return videoLink;
+  };
+
+  if (!videoGrid) {
+    videoGrid = document.createElement('div');
+    videoGrid.id = 'videoGrid';
+    videoGrid.classList.add('video-grid');
+    document.body.appendChild(videoGrid);
+  } else {
+    videoGrid.style.display = 'block';
   }
-  if (newsGrid) {
-    newsGrid.remove();
+
+  if (!videoGrid.hasChildNodes()) {
+    Promise.all(data.value.map(videoItem => createVideoItem(videoItem)))
+      .then(videoElements => {
+        videoElements.forEach(videoElement => videoGrid.appendChild(videoElement));
+      });
   }
-  if (videoGrid) {
-    videoGrid.remove();
-  }
-  if (timezoneContainer) {
-    timezoneContainer.style.display = 'none';
-  }
-  if (content) {
-    content.style.display = 'none';
-  }
-  if (assistantResponseBox) {
-    assistantResponseBox.style.display = 'none';
-  }
-  if (WikipediaContainer) {
-    WikipediaContainer.style.display = 'none';
-  }
-  if (definitionContainer) {
-    definitionContainer.style.display = 'none';
+} else if (isImageSearch) {
+  clearAll();
+  searchbutton.classList.remove('blueunderline');
+  chatbutton.classList.remove('blueunderline');
+  newsbutton.classList.remove('blueunderline');
+  videobutton.classList.remove('blueunderline');
+  imagebutton.classList.add('blueunderline');
+  shouldloadnewimagescrollresults = false;
+  setTimeout(() => {
+    shouldloadnewimagescrollresults = true;
+  }, 2000);
+  function setElementVisibility(id, visibility) {
+    const element = document.getElementById(id);
+    if (element) {
+      element.style.display = visibility ? 'block' : 'none';
+    }
   }
 
   let imageGrid = document.getElementById('imageGrid');
-  let currentIndex = 0;
   let fullScreenImageOverlay;
   let fullScreenImage;
-  let arrowNext;
-  let arrowPrev;
-  let downloadButton;
-  let printButton;
-  let copyButton;
-  const imagesData = data.value;
-  
+  const imagesData = data.value || [];
+
   if (!imageGrid) {
     imageGrid = document.createElement('div');
     imageGrid.id = 'imageGrid';
     imageGrid.classList.add('image-grid');
+    imageGrid.style.justifyContent = 'center';
+    imageGrid.style.alignItems = 'center';
     document.body.appendChild(imageGrid);
+  } else {
+    setElementVisibility('imageGrid', true);
+    return;
   }
-  
+
   function showFullScreenImage(index) {
     fullScreenImage.src = imagesData[index].thumbnailUrl;
+    fullScreenImage.style.cursor = 'pointer';
     fullScreenImageOverlay.style.display = 'flex';
-    currentIndex = index;
+    fullScreenImageOverlay.style.alignItems = 'center';
+    fullScreenImageOverlay.style.justifyContent = 'center';
     document.body.style.overflow = 'hidden';
+    currentIndex = index;
+
+    fullScreenImageOverlay.style.padding = '0';
+    fullScreenImage.style.width = 'auto';
+    fullScreenImage.style.height = 'auto';
+    fullScreenImage.style.minWidth = '35vw';
+    fullScreenImage.style.minHeight = '35vh';
+    fullScreenImage.style.maxWidth = '80vw';
+    fullScreenImage.style.maxHeight = '80vh';
+    fullScreenImage.style.objectFit = 'contain';
+    fullScreenImageOverlay.style.overflowY = 'scroll';
+
+    fullScreenImage.dataset.hostPageUrl = imagesData[index].hostPageUrl;
   }
-  
+
   function hideFullScreenImage() {
     fullScreenImageOverlay.style.display = 'none';
+    fullScreenImageOverlay.style.height = 'auto';
     document.body.style.overflow = 'auto';
-  }  
-  
+    fullScreenImageOverlay.style.padding = '2vh 2vw';
+    fullScreenImageOverlay.style.alignItems = 'center';
+  }
+
   fullScreenImageOverlay = document.createElement('div');
   fullScreenImageOverlay.id = 'fullScreenImageOverlay';
+  fullScreenImageOverlay.style.position = 'fixed';
+  fullScreenImageOverlay.style.top = '0';
+  fullScreenImageOverlay.style.right = '0';
+  fullScreenImageOverlay.style.bottom = '0';
+  fullScreenImageOverlay.style.left = '0';
+  fullScreenImageOverlay.style.display = 'none';
+  fullScreenImageOverlay.style.alignItems = 'center';
+  fullScreenImageOverlay.style.justifyContent = 'center';
   fullScreenImageOverlay.classList.add('full-screen-image-overlay');
   document.body.appendChild(fullScreenImageOverlay);
-  
+
   fullScreenImage = document.createElement('img');
   fullScreenImageOverlay.appendChild(fullScreenImage);
-  
-  arrowNext = document.createElement('button');
-  arrowNext.textContent = '>';
-  arrowNext.classList.add('next-image');
-  fullScreenImageOverlay.appendChild(arrowNext);
-  
-  arrowPrev = document.createElement('button');
-  arrowPrev.textContent = '<';
-  arrowPrev.classList.add('prev-image');
-  fullScreenImageOverlay.appendChild(arrowPrev);
-  
-  arrowNext.addEventListener('click', () => {
-    if (currentIndex < imagesData.length - 1) {
-      currentIndex++;
-      showFullScreenImage(currentIndex);
-    }
+
+  fullScreenImage.addEventListener('click', () => {
+    window.open(fullScreenImage.dataset.hostPageUrl, '_blank');
   });
-  
-  arrowPrev.addEventListener('click', () => {
-    if (currentIndex > 0) {
-      currentIndex--;
-      showFullScreenImage(currentIndex);
-    }
-  });
-  
+
   let closeButton;
   closeButton = document.createElement('button');
   closeButton.textContent = 'X';
   closeButton.classList.add('close-button');
   fullScreenImageOverlay.appendChild(closeButton);
-  
+
   closeButton.addEventListener('click', () => {
     hideFullScreenImage();
   });
-  
-  imagesData.forEach((image, index) => {
-    const imgContainer = document.createElement('div');
-    imgContainer.classList.add('image-container');
-    const img = document.createElement('img');
-    img.src = image.thumbnailUrl;
-    img.style.objectFit = 'cover';
-    img.addEventListener('click', () => showFullScreenImage(index));
-    const imgTitle = document.createElement('h4');
-    imgTitle.textContent = image.name.substring(0,40) + (image.name.length > 40 ? '...' : '');
-    imgContainer.appendChild(img);
-    imgContainer.appendChild(imgTitle);
-    imageGrid.appendChild(imgContainer);
-  });  
 
-  const firstNewImage = imageGrid.querySelectorAll('.image-container')[offset];
-  if (firstNewImage) {
-    firstNewImage.scrollIntoView({ behavior: 'smooth' });
-  }
-  }
+  if (shouldloadnewimageresults) {
+    const imagePromises = imagesData.map((image, index) => {
+      return new Promise((resolve, reject) => {
+        if (!image.thumbnailUrl) return resolve();
+  
+        const imgContainer = document.createElement('div');
+        imgContainer.classList.add('image-container');
+        imgContainer.style.display = 'block';
+        imgContainer.style.justifyContent = 'center';
+        imgContainer.style.alignItems = 'center';
+        imgContainer.style.marginBottom = '0.75vh';
+  
+        const img = document.createElement('img');
+        img.style.display = 'none';
+        img.onload = function () {
+          img.style.display = 'block';
+          resolve(img);
+        };
+        img.onerror = function () {
+          reject();
+        };
+        img.src = image.thumbnailUrl;
+        img.style.objectFit = 'cover';
+        img.classList.add('image-hover');
+        img.style.cursor = 'pointer';
+        img.style.transition = 'transform 0.15s';
+        img.addEventListener('click', () => {
+          lastScrollTop = window.scrollY;
+          showFullScreenImage(index);
+        });
+        img.addEventListener('mousedown', () => {
+          img.style.transform = 'scale(0.95)';
+        });
+        img.addEventListener('mouseup', () => {
+          img.style.transform = 'scale(1)';
+        });
+  
+        imgContainer.appendChild(img);
+        imageGrid.appendChild(imgContainer);
+      });
+    });
+  
+    Promise.all(imagePromises)
+      .then((images) => {
+        images.forEach(img => {
+          if (img) img.style.display = 'block';
+        });
+        imageGrid.style.display = 'block';
+        shouldloadnewimageresults = false;
+        shouldloadnewimagescrollresults = true;
+      });
+  }  
+}
+
   window.addEventListener('scroll', () => {
     const scrollPosition = window.innerHeight + window.scrollY;
     const nearBottom = scrollPosition >= document.body.offsetHeight * 0.9;
-    if (isImageSearch && nearBottom) {
-        offset += data.value.length;
-        showSkeletonLoader();
-        const apiRequestUrl = `api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
-        tryFetch(apiRequestUrl);
+    if (isImageSearch && nearBottom && shouldloadnewimagescrollresults) {
+      shouldloadnewimageresults = true;
+  
+      offset += 105;
+
+      const apiRequestUrl = `api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+      tryFetch(apiRequestUrl);
+      shouldloadnewimagescrollresults = false;
     }
-});
+  });
+  
+  setTimeout(() => {
+    shouldloadnewimagescrollresults = true;
+  }, 4000);
   }
 
-  async function fetchAssistantResponse(searchTerm, onUpdate, isWeatherSearch) {
-    let searchTermWithoutSpaces = searchTerm.replace(/\s+/g, '');
-    let assistantResponseBox = document.getElementById('assistant-response-box'); 
-
-    if (isWeatherSearch) {
-        assistantResponseBox.style.display = 'none';
-        return null;
+  function updateResults(searchResults) {
+    function startLoadingAnimation() {
+      loadingInterval = setInterval(() => {
+        loadingAnimation = loadingAnimation.length < 3 ? loadingAnimation + '.' : '.';
+        assistantResponseBox.innerText = loadingAnimation;
+      }, 100);
     }
-
-    if (/^(create|make) (a picture|an? image|a photo) of /i.test(searchTerm) || 
-        searchTermWithoutSpaces === 'calculator' || 
-        isValidMathExpression(searchTermWithoutSpaces)) {
-      
-        assistantResponseBox.style.display = 'none';
-        return null;
+  
+    function stopLoadingAnimation() {
+      clearInterval(loadingInterval);
     }
-
-    assistantResponseBox.style.display = 'block';
-
-    const eventSource = new EventSource(`openai_request.php?searchTerm=${encodeURIComponent(searchTerm)}`);
-    let result = "";
-    
-    return new Promise((resolve, reject) => {
-      eventSource.onmessage = (event) => {
-        const jsonString = event.data.replace(/^data:\s*/, '');
-  
-        if (!isValidJson(jsonString)) {
-          return;
-        }
-  
-        let data = JSON.parse(jsonString);
-  
-        if (data.timeZone) {
-          eventSource.close();
-          resolve(null);
-          return;
-        }
-  
-        if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
-          const content = data.choices[0].delta.content;
-          result += content;
-          onUpdate(result);
-        } else if (data.finish_reason) {
-          resolve(result);
-        }
-      };
-  
-      eventSource.onerror = (error) => {
-        reject(null);
-        eventSource.close();
-      };
-    });
-}
-
-  const assistantResponseBox = document.getElementById("assistant-response-box");
-
-  function updateResults() {
     if (assistantResponseBox.innerText === "Getting response...") {
-      fetchAssistantResponse(searchTerm, (updatedResponse) => {
-        assistantResponseBox.innerText = updatedResponse;
-      })
-      .then((response) => {
-        if (response !== undefined) {
-          assistantResponseBox.innerText = response;
-        }
-      })
-      .catch((error) => console.error(error));
+      startLoadingAnimation();
+      if (typeof fetchAssistantResponse !== "undefined") {
+        fetchAssistantResponse(searchTerm,(updatedResponse) => {
+          stopLoadingAnimation();
+          if (updatedResponse !== undefined) {
+            assistantResponseBox.innerText = updatedResponse;
+          } else {
+            console.error("fetchAssistantResponse returned an undefined response");
+          }
+        }).catch((error) => {
+          stopLoadingAnimation();
+        });
+      } else {
+        stopLoadingAnimation();
+        console.error("fetchAssistantResponse is not defined");
+      }
     }
   }
 
-updateResults();
-  
   function createPaginationButtons(totalEstimatedMatches) {
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
@@ -1325,195 +1015,388 @@ updateResults();
       nextButton.textContent = 'Next';
       nextButton.onclick = () => {
         currentPage++;
-        fetchResults(currentPage * 50, searchType);
+        fetchResults(currentPage * 10, searchType);
       };
       pagination.appendChild(nextButton);
     }
   }
-  
-  search();
+
+  function clearAll() {
+    const elementsToHide = ['search-results', 'newsGrid', 'videoGrid', 'imageGrid', 'timezone-container', 'related-searches-container', 'chat-interface', 'pagination', 'definition-container', 'content', 'assistant-response-box', 'calculator-container', 'chatContainer', 'chat-interface'];
+
+    for (let elementId of elementsToHide) {
+      try {
+        let element = document.getElementById(elementId);
+        if (element) {
+          element.style.display = 'none';
+        }
+      } catch (error) {
+        console.error(`Failed to hide element with id ${elementId}.`, error);
+      }
+    }
+
+    try {
+    } catch (error) {
+      console.error('Failed to hide skeleton loader.', error);
+    }
+  }
 
   document.getElementById('videoBtn').addEventListener('click', (e) => {
+    if (isVideoSearch) {
+      return;
+    }
     isNewsSearch = false;
     isImageSearch = false;
     isVideoSearch = true;
-    document.getElementById('related-searches-container').classList.add('not-visible');
-    const pagination = document.getElementById('pagination');
-    const timezoneContainer = document.getElementById('timezone-container');
-    const newsGrid = document.getElementById('newsGrid');
-    if (newsGrid) {
-      newsGrid.remove();
-    }
-    if (timezoneContainer) {
-      timezoneContainer.style.display = 'none';
-    }
-    if (pagination) {
-      pagination.style.visibility = 'hidden';
-    }
-    if (resultsTable) {
-      resultsTable.style.display = 'none';
-    }
-    const videoGrid = document.getElementById('videoGrid');
-    if (!videoGrid || newsGrid.querySelectorAll('.video-container').length === 0) {
-      showSkeletonLoader();
-      const apiRequestUrl = `api_request.php?apiType=videos&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
-      tryFetch(apiRequestUrl);
-    }
-    fetchResults(0, 'videos');
+    isAllSearch = false;
+    isChatSearch = false;
+    const apiRequestUrl = `api_request.php?apiType=videos&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+    tryFetch(apiRequestUrl)
+    fetchResults(0, 'videos')
   });
 
   document.getElementById('imagesBtn').addEventListener('click', (e) => {
-    isImageSearch = true;
-    isNewsSearch = false;
-    isVideoSearch = false;
-
-    if (resultsTable) {
-      resultsTable.style.display = 'none';
-    }
-    const imageGrid = document.getElementById('imageGrid');
-    if (!imageGrid || imageGrid.querySelectorAll('.image-container').length === 0) {
-      showSkeletonLoader();
+      if (isImageSearch) {
+        return;
+      }
+      isImageSearch = true;
+      isNewsSearch = false;
+      isVideoSearch = false;
+      isAllSearch = false;
+      isChatSearch = false;
+      if (shouldloadnewimageresults) {
       const apiRequestUrl = `api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
-      tryFetch(apiRequestUrl);
-    }
-    fetchResults(0, 'images');
+      tryFetch(apiRequestUrl)
+      fetchResults(0, 'images')
+      const imageGrid = document.getElementById('imageGrid');
+      if (imageGrid) {
+        imageGrid.style.display = 'block';
+          }
+      }
   });
 
   document.getElementById('newsBtn').addEventListener('click', (e) => {
+    if (isNewsSearch) {
+      return;
+    }
     isNewsSearch = true;
     isImageSearch = false;
     isVideoSearch = false;
-    document.getElementById('related-searches-container').classList.add('not-visible');
-    const pagination = document.getElementById('pagination');
-    const definitionContainer = document.getElementById('definition-container');
-    const videoGrid = document.getElementById('videoGrid');
-    if (videoGrid) {
-      videoGrid.remove();
+    isAllSearch = false;
+    isChatSearch = false;
+    const apiRequestUrl = `api_request.php?apiType=news&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+    tryFetch(apiRequestUrl)
+  });
+
+  document.getElementById('searchBtn').addEventListener('click', (e) => {
+      if (isAllSearch) {
+        return;
+      }
+      clearAll();
+      searchbutton.classList.add('blueunderline');
+      chatbutton.classList.remove('blueunderline');
+      imagebutton.classList.remove('blueunderline');
+      newsbutton.classList.remove('blueunderline');
+      videobutton.classList.remove('blueunderline');
+      isImageSearch = false;
+      isNewsSearch = false;
+      isVideoSearch = false;
+      isAllSearch = true;
+      isChatSearch = false;
+      fetchResults(0, 'web');
+  });
+
+  document.getElementById('chatBtn').addEventListener('click', (e) => {
+    searchbutton.classList.remove('blueunderline');
+    chatbutton.classList.add('blueunderline');
+    imagebutton.classList.remove('blueunderline');
+    newsbutton.classList.remove('blueunderline');
+    videobutton.classList.remove('blueunderline');
+    let eventSource;
+  const lastSearchTerm = localStorage.getItem('lastSearchTerm');
+
+  if (!lastSearchTerm || searchTerm !== lastSearchTerm) {
+    fetch('/deletechat.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ searchTerm })
+    });
+  }
+
+  localStorage.setItem('lastSearchTerm', searchTerm);
+    if (isChatSearch) {
+      return;
     }
-    if (pagination) {
-      pagination.style.visibility = 'hidden';
-    }
-    if (definitionContainer) {
-      definitionContainer.style.display = 'none';
-    }
-    const timezoneContainer = document.getElementById('timezone-container');
-    if (timezoneContainer) {
-      timezoneContainer.style.display = 'none';
-    }
-    if (resultsTable) {
-      resultsTable.style.display = 'none';
-    }
-    const newsGrid = document.getElementById('newsGrid');
-    if (!newsGrid || newsGrid.querySelectorAll('.news-container').length === 0) {
-      showSkeletonLoader();
-      const apiRequestUrl = `api_request.php?apiType=news&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
-      tryFetch(apiRequestUrl);
-    }
-    fetchResults(0, 'news');
+    try {
+      clearAll();
+      isImageSearch = false;
+      isNewsSearch = false;
+      isVideoSearch = false;
+      isAllSearch = false;
+      isChatSearch = true;
+        const chatInterface = document.getElementById('chat-interface');
+        if (chatInterface) {
+          chatInterface.style.display = 'flex';
+          const chatContainer = document.getElementById('chatContainer');
+          if (chatContainer) {
+            chatContainer.style.display = 'block';
+          }
+          const chatInput = document.getElementById('chat-input');
+          if (chatInput) {
+            chatInput.style.display = 'block';
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to clear all:', error);
+      }
+      const chatInterface = document.createElement('div');
+      chatInterface.id = 'chat-interface';
+      document.body.appendChild(chatInterface);
+      
+      const chatContainer = document.createElement('div');
+      chatContainer.id = 'chatContainer';
+      chatInterface.appendChild(chatContainer);
+      window.scrollTo(0, document.body.scrollHeight);
+      
+      const chatInputContainer = document.createElement('div');
+      chatInputContainer.className = 'chat-input-container';
+      chatInterface.appendChild(chatInputContainer);
+      
+      const chat = document.createElement('button');
+      chat.className = 'enter-button-style';
+      const chatIcon = document.createElement('img');
+      chatIcon.src = 'arrow.webp';
+      chatIcon.className = 'chat-icon';
+      chat.appendChild(chatIcon);
+      chatInputContainer.appendChild(chat);
+      
+      const chatInput = document.createElement('textarea');
+      chatInput.id = 'chat-input';
+      chatInput.maxLength = 20000;
+      chatInputContainer.appendChild(chatInput);          
+    
+    chatInput.addEventListener('input', function(event) {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = (chatInput.scrollHeight) + 'px';
+      if (chatInput.scrollHeight > parseInt(chatInput.style.maxHeight.replace('rem', ''))) {
+        chatInput.style.overflowY = 'auto';
+      } else {
+        chatInput.style.overflowY = 'hidden';
+      }
+    });
+    
+    chatInput.addEventListener('keyup', function(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        chat.click();
+      }
+    });
+    
+    let prevResult = "";
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await sendInitialMessages(searchTerm, assistantresponse);
   });
   
-  document.getElementById('searchBtn').addEventListener('click', (e) => {
-    isImageSearch = false;
-    isNewsSearch = false;
-    isVideoSearch = false;
-
-    const definitionContainer = document.getElementById('definition-container');
-    if (definitionContainer) {
-      definitionContainer.style.display = 'block'
+  async function sendInitialMessages(userMessage, assistantMessage) {
+      const locationData = await getLocationData();
+      const apiRequestUrl = `chat.php?userMessage=${encodeURIComponent(userMessage)}&assistantMessage=${encodeURIComponent(assistantMessage)}&latitude=${locationData.latitude}&longitude=${locationData.longitude}`;
+      eventSource = new EventSource(apiRequestUrl);
+  }
+  
+  async function getLocationData() {
+      let latitude = localStorage.getItem('latitude');
+      let longitude = localStorage.getItem('longitude');
+      let ipData = localStorage.getItem('ipData');
+  
+      if (!latitude || !longitude) {
+          if (ipData) {
+              ipData = JSON.parse(ipData);
+              latitude = ipData.latitude;
+              longitude = ipData.longitude;
+          } else {
+              const response = await fetch('https://ipinfo.io/json');
+              ipData = await response.json();
+              localStorage.setItem('ipData', JSON.stringify(ipData));
+              latitude = ipData.latitude;
+              longitude = ipData.longitude;
+          }
+      }
+      return { latitude, longitude };
+  }
+  
+  chat.addEventListener('click', async () => {
+    const userMessage = chatInput.value.trim();
+    if (!userMessage) {
+        return;
     }
+    chatInput.value = '';
+    chatInput.style.height = '3rem';
+    
+    chat.className = 'enter-button-style';
+    chat.style.transform = 'scale(0.9)';
+    
+    setTimeout(function(){
+        chat.style.transform = 'scale(1)';
+    }, 300);
+    
+    const userMsgElement = document.createElement('div');
+    userMsgElement.className = 'user-msg-element';
+    
+    const userMsgText = document.createElement('div');
+    userMsgText.textContent = userMessage;
+    userMsgText.className = 'user-msg-text';
+    
+    userMsgElement.appendChild(userMsgText);        
+    chatContainer.appendChild(userMsgElement);
+    
+    if (isFirstMessage) {
+      const aiMsgElement = document.createElement('div');
+      aiMsgElement.classList.add('ai-msg-element');
+      chatContainer.appendChild(aiMsgElement);
+    
+      const aiMsgImage = document.createElement('img');
+      aiMsgImage.src = assistantresponse ? 'tlog.webp' : 'lightningboltload.gif';
+      aiMsgImage.classList.add('ai-msg-image');
+      aiMsgElement.appendChild(aiMsgImage);
+    
+      const aiMsgText = document.createElement('div');
+      aiMsgText.classList.add('ai-msg-text');
+      aiMsgText.textContent = assistantresponse;
+      aiMsgElement.appendChild(aiMsgText);    
+    
+        let prevAssistantresponse = assistantresponse;
+        assistantresponseInterval = setInterval(() => {
+          if (assistantresponse !== prevAssistantresponse) {
+            aiMsgText.textContent = assistantresponse;
+            aiMsgImage.src = assistantresponse ? 'tlog.webp' : 'lightningboltload.gif';
+            prevAssistantresponse = assistantresponse;
+          }
+        }, 5);
+    
+        isFirstMessage = false;
+      } else {
+        sendInitialMessages(userMessage, assistantresponse);
+      async function getLocationData() {
+        let latitude = localStorage.getItem('latitude');
+        let longitude = localStorage.getItem('longitude');
+        let ipData = localStorage.getItem('ipData');
+    
+        if (!latitude || !longitude) {
+          if (ipData) {
+            ipData = JSON.parse(ipData);
+            latitude = ipData.latitude;
+            longitude = ipData.longitude;
+          } else {
+            const response = await fetch('https://ipinfo.io/json');
+            ipData = await response.json();
+            localStorage.setItem('ipData', JSON.stringify(ipData));
+            latitude = ipData.latitude;
+            longitude = ipData.longitude;
+          }
+        }
+        return { latitude, longitude };
+      }
 
-    if (resultsTable) {
-      resultsTable.style.display = 'block';
-    }
+      if (eventSource) {
+        eventSource.close();
+      }
+    
+      getLocationData().then(({ latitude, longitude }) => {
+        const apiRequestUrl = `chat.php?userMessage=${encodeURIComponent(userMessage)}&assistantMessage=${encodeURIComponent(assistantresponse)}&latitude=${latitude}&longitude=${longitude}`;
+        eventSource = new EventSource(apiRequestUrl);
+        let timeoutId;
 
-    currentPage = 0;
-    document.getElementById('related-searches-container').classList.remove('not-visible');
-    fetchResults(0, 'web');
-});
+      const aiMsgElement = document.createElement('div');
+      aiMsgElement.classList.add('ai-msg-element');
+      chatContainer.appendChild(aiMsgElement);
 
-  let disableAllExceptMaps = () => {
-    Array.from(document.body.children).forEach((el) => {
-      if (el.id !== 'maps-container') el.setAttribute('disabled', 'true');
+      const aiMsgImage = document.createElement('img');
+      aiMsgImage.src = 'lightningboltload.gif';
+      aiMsgImage.classList.add('ai-msg-image');
+      aiMsgElement.appendChild(aiMsgImage);
+
+      const aiMsgText = document.createElement('div');
+      aiMsgText.style.whiteSpace = 'pre-wrap';
+      aiMsgText.style.backgroundColor = '#F5F5F5';
+      aiMsgText.style.borderRadius = '0.625em';
+      aiMsgText.style.padding = '0.625em';
+      aiMsgText.style.width = '100%';
+      aiMsgElement.appendChild(aiMsgText);
+
+      function typeMessage() {
+        if (i < bufferedMessage.length) {
+          aiMsgText.textContent += bufferedMessage[i];
+          i++;
+          const scrollValue = chatContainer.scrollHeight - chatContainer.clientHeight;
+          chatContainer.scrollTop = scrollValue;
+          setTimeout(typeMessage, 4.5);
+        } else {
+          isWaitingForData = true;
+        }
+      }        
+
+      eventSource.onmessage = (event) => {
+        aiMsgImage.src = 'tlog.webp';
+        const jsonString = event.data.replace(/^data:\s*/, '');
+
+        if (!isValidJson(jsonString)) {
+          return;
+        }
+
+        let data = JSON.parse(jsonString);
+
+        if (data.completion) {
+          if (prevResult !== data.completion) {
+            let newMessage = data.completion.replace(prevResult, '');
+            bufferedMessage += newMessage;
+            prevResult = data.completion;
+
+            if (isNewMessage) {
+              typeMessage();
+              isNewMessage = false;
+            } else if (isWaitingForData) {
+              isWaitingForData = false;
+              typeMessage();
+            }
+          }
+        }          
+
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          eventSource.close();
+        }, 3000);
+
+        if (data.finished) {
+          eventSource.close();
+          clearTimeout(timeoutId);
+          bufferedMessage = "";
+          i = 0;
+          isNewMessage = true;
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('An error occurred with the EventSource:', error);
+        eventSource.close();
+      };
     });
-  };
-  
-  let enableAll = () => {
-    Array.from(document.body.children).forEach((el) => {
-      el.removeAttribute('disabled');
-    });
-  };
-  
-  document.getElementById('mapsBtn').addEventListener('click', (e) => {
-    isNewsSearch = false;
-    isImageSearch = false;
-    window.scrollTo(0,0);
-  
-    document.body.style.overflow = 'hidden';
-  
-    let mapsContainer = document.getElementById('maps-container');
-    mapsContainer.style.display = 'block';
-    mapsContainer.style.position = 'fixed';
-    mapsContainer.style.top = '0';
-    mapsContainer.style.left = '0';
-    mapsContainer.style.width = '135vw';
-    mapsContainer.style.height = '100vh';
-    mapsContainer.style.zIndex = '1000';
-    mapsContainer.style.overflow = 'auto';
-  
-    disableAllExceptMaps();
-  
-    if (!mapsContainer.hasChildNodes()) {
-        fetch('api_request.php?apiType=maps&searchTerm=' + encodeURIComponent(searchTerm))
-        .then(response => response.text())
-        .then(data => {
-            let iframe = document.createElement('iframe');
-            iframe.src = data;
-            iframe.style.border = '0';
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.allowFullscreen = true;
-  
-            let closeButtonTop = document.createElement('div');
-            closeButtonTop.innerHTML = 'X';
-            closeButtonTop.className = 'close-button';
-  
-            let closeButtonBottom = document.createElement('div');
-            closeButtonBottom.innerHTML = 'X';
-            closeButtonBottom.className = 'close-button bottom';
-  
-            let closeAction = (e) => {
-                e.currentTarget.parentNode.style.display = 'none';
-                document.body.style.overflow = 'auto';
-                enableAll();
-                e.preventDefault();
-            };
-  
-            closeButtonTop.addEventListener('click', closeAction);
-            closeButtonTop.addEventListener('touchend', closeAction);
-            closeButtonBottom.addEventListener('click', closeAction);
-            closeButtonBottom.addEventListener('touchend', closeAction);
-  
-            mapsContainer.appendChild(iframe);
-            mapsContainer.appendChild(closeButtonTop);
-            mapsContainer.appendChild(closeButtonBottom);
-        });
-    }
+    clearInterval(assistantresponseInterval);
+  }
 });  
 
-  const definitionContainer = document.getElementById('definition-container');
-  const WikipediaContainer = document.getElementById('wikipedia-container');
-  
-  if (definitionContainer && definitionContainer.querySelector('h3')) {
-    definitionContainer.style.display = 'block';
-  }
-  
-  if (WikipediaContainer) {
-    WikipediaContainer.style.display = 'block';
-  }
-  }
+  chatInput.value = searchTerm;
+  chat.click();
+  });
 
-  fetchResults();
+  document.getElementById('mapsBtn').addEventListener('click', () => {
+  window.location.href = "https://www.google.com/maps/search/" + encodeURIComponent(searchTerm);
+  });
+  updateResults();
+  search();
   fetchDefinitions(searchTerm);
-  
-  return;
+  main(searchTerm);
   }
+  fetchResults();

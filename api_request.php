@@ -1,166 +1,226 @@
 <?php
-$apiType = $_GET['apiType'];
-$searchTerm = $_GET['searchTerm'];
-$offset = isset($_GET['offset']) ? $_GET['offset'] : 0;
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-function fetch_weather_api($apiKey, $lat, $lon, $days, $city = null) {
-    $endpoint = "http://api.weatherapi.com/v1/forecast.json?key=" . $apiKey . "&q=" . ($city ? $city : $lat . "," . $lon) . "&days=" . $days . "&hourly=24";
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
-    return $response;
+function sanitize_input($input) {
+    return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+}
+
+function validate_ip($ip) {
+    return filter_var($ip, FILTER_VALIDATE_IP);
+}
+
+function get_geo_location($ip) {
+    static $cache = [];
+    if (isset($cache[$ip])) {
+        return $cache[$ip];
+    }
+
+    $api_key = getenv('IP_API_GEOLOCATION_API_KEY');
+    $url = "https://ipapi.co/{$ip}/json/?key={$api_key}";
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $json = curl_exec($ch);
+
+    if ($json === false) {
+        throw new Exception('cURL Error: ' . curl_error($ch));
+    }
+
+    curl_close($ch);
+
+    $data = json_decode($json, TRUE);
+    $cache[$ip] = $data;
+
+    return $data;
+}
+
+$apiType = sanitize_input($_GET['apiType'] ?? '');
+$searchTerm = sanitize_input($_GET['searchTerm'] ?? '');
+$offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
+
+$userIp = $_GET['userIp'] ?? null;
+$sentLat = $_GET['latitude'] ?? null;
+$sentLong = $_GET['longitude'] ?? null;
+
+if ($userIp) {
+    $userIp = sanitize_input($userIp);
+    if (!validate_ip($userIp)) {
+        die('Invalid IP address');
+    }
 }
 
 function fetch_with_news_api_key($apiKey, $searchTerm, $offset) {
     $count = 55;
-    $endpoint = "https://api.bing.microsoft.com/v7.0/news/search?q=" . urlencode($searchTerm) . "&offset=" . $offset . "&mkt=en-US" . "&count=" . $count;
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Ocp-Apim-Subscription-Key: $apiKey\r\n" . "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
-    return $response;
-}
+    $endpoint = "https://api.bing.microsoft.com/v7.0/news/search?q=" . urlencode($searchTerm) . "&offset=" . $offset . "&count=" . $count;
 
-function fetch_google_maps($apiKey, $searchTerm) {
-    $endpoint = "https://www.google.com/maps/embed/v1/search?q=" . urlencode($searchTerm) . "&key=" . $apiKey;
-    return $endpoint;
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Accept: application/json",
+        "Referer: ",
+        "Ocp-Apim-Subscription-Key: $apiKey"
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        throw new Exception('cURL Error: ' . curl_error($ch));
+    }
+
+    curl_close($ch);
+
+    return $response;
 }
 
 function fetch_with_image_api_key($apiKey, $searchTerm, $offset) {
     $count = 105;
     $endpoint = "https://api.bing.microsoft.com/v7.0/images/search?q=" . urlencode($searchTerm) . "&subscription-key=" . $apiKey . "&offset=" . $offset . "&count=" . $count;
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Accept: application/json",
+        "Referer: ",
+        "subscription-key: $apiKey"
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        throw new Exception('cURL Error: ' . curl_error($ch));
+    }
+
+    curl_close($ch);
+
     return $response;
 }
 
 function fetch_with_video_api_key($apiKey, $searchTerm, $offset) {
     $count = 55;
     $endpoint = "https://api.bing.microsoft.com/v7.0/videos/search?q=" . urlencode($searchTerm) . "&subscription-key=" . $apiKey . "&offset=" . $offset . "&count=" . $count;
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
-    return $response;
-}
 
-function fetch_with_api_key($apiKey, $searchTerm, $offset) {
-    $count = 25;
-    $endpoint = "https://api.bing.microsoft.com/v7.0/search?q=" . urlencode($searchTerm) . "&subscription-key=" . $apiKey . "&offset=" . $offset . "&count=" . $count;
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
-    return $response;
-}
+    $ch = curl_init();
 
-function fetch_merriam_webster_definitions($apiKey, $searchTerm) {
-    $endpoint = "https://www.dictionaryapi.com/api/v3/references/collegiate/json/" . urlencode($searchTerm) . "?key=" . $apiKey;
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
-    return $response;
-}
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Accept: application/json",
+        "Referer: ",
+        "subscription-key: $apiKey"
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-function fetch_autosuggest_results($apiKey1, $apiKey2, $searchTerm) {
-    $response = fetch_autosuggest_with_api_key($apiKey1, $searchTerm);
-    if (!$response) {
-        $response = fetch_autosuggest_with_api_key($apiKey2, $searchTerm);
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        throw new Exception('cURL Error: ' . curl_error($ch));
     }
+
+    curl_close($ch);
+
     return $response;
 }
 
-function fetch_autosuggest_with_api_key($apiKey, $searchTerm) {
-    $endpoint = "https://api.bing.microsoft.com/v7.0/suggestions?q=" . urlencode($searchTerm) . "&subscription-key=" . $apiKey;
-    $opts = [
-        'http' => [
-            'method' => 'GET',
-            'header' => "Accept: application/json\r\n"
-        ]
-    ];
-    $context = stream_context_create($opts);
-    $response = @file_get_contents($endpoint, false, $context);
-    return $response;
-}
+function fetch_with_api_key($apiKey, $searchTerm, $offset, $userIp, $sentLat = null, $sentLong = null) {
+    static $geoCache = [];
+    $count = 10;
 
-if ($apiType == 'merriamWebster') {
-    $merriamWebsterApiKey = 'aa546e57-8a99-4ed8-b8e1-a11fe5df467e';
-    $response = fetch_merriam_webster_definitions($merriamWebsterApiKey, $searchTerm);
-} elseif ($apiType == 'autosuggest') {
-    $apiKey1 = '31acff7fbe044d9bab0bd40976ac8c2f';
-    $apiKey2 = 'e10549f9d69b46e1ae525d416742281b';
-    $response = fetch_autosuggest_results($apiKey1, $apiKey2, $searchTerm);
-} elseif ($apiType == 'images') {
-    $apiKey1 = '8e9afa34e5ad4ed1b7fa562743d7b2e1';
-    $apiKey2 = 'f15fd28027cf4913aae8988257ab0acc';
-    $response = fetch_with_image_api_key($apiKey1, $searchTerm, $offset);
-    if (!$response) {
-        $response = fetch_with_image_api_key($apiKey2, $searchTerm, $offset);
-    }
-} elseif ($apiType == 'videos') {
-    $apiKey1 = '8e9afa34e5ad4ed1b7fa562743d7b2e1';
-    $apiKey2 = 'f15fd28027cf4913aae8988257ab0acc';
-    $response = fetch_with_video_api_key($apiKey1, $searchTerm, $offset);
-    if (!$response) {
-        $response = fetch_with_video_api_key($apiKey2, $searchTerm, $offset);
-    }
-} elseif ($apiType == 'maps') {
-    $apiKey = 'AIzaSyAum7fXVwoss86yJDbHCoAOwwomhBVJor0';
-    $response = fetch_google_maps($apiKey, $searchTerm);
- } elseif ($apiType == 'forecast') {
-        $weatherApiKey = 'cb70b6bdd3c845829aa121546231104';
-        $city = isset($_GET['city']) ? $_GET['city'] : null;
-        if($city) {
-            $response = fetch_weather_api($weatherApiKey, null, null, $days, $city);
+    $lat = $sentLat;
+    $long = $sentLong;
+
+    if ($sentLat === null || $sentLong === null) {
+        if (isset($geoCache[$userIp])) {
+            $geoData = $geoCache[$userIp];
         } else {
-            $lat = $_GET['lat'];
-            $lon = $_GET['lon'];
-            $days = $_GET['days'];
-            $response = fetch_weather_api($weatherApiKey, $lat, $lon, $days);
+            $geoData = get_geo_location($userIp);
+            $geoCache[$userIp] = $geoData;
         }
-} elseif ($apiType == 'news') {
-    $apiKey1 = '8e9afa34e5ad4ed1b7fa562743d7b2e1';
-    $apiKey2 = 'f15fd28027cf4913aae8988257ab0acc';
-    $response = fetch_with_news_api_key($apiKey1, $searchTerm, $offset);
-    if (!$response) {
-        $response = fetch_with_news_api_key($apiKey2, $searchTerm, $offset);
+        $lat = $geoData['latitude'] ?? null;
+        $long = $geoData['longitude'] ?? null;
     }
-} else {
-    $apiKey1 = '8e9afa34e5ad4ed1b7fa562743d7b2e1';
-    $apiKey2 = 'e10549f9d69b46e1ae525d416742281b';
-    $response = fetch_with_api_key($apiKey1, $searchTerm, $offset);
-    if (!$response) {
-        $response = fetch_with_api_key($apiKey2, $searchTerm, $offset);
+
+    $re = ($lat !== null && $long !== null) ? 22 : 18000;
+
+    $endpoint = "https://api.bing.microsoft.com/v7.0/search?q=" . urlencode($searchTerm) . "&subscription-key=" . $apiKey . "&offset=" . $offset . "&count=" . $count;
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    $headers = [
+        "Accept: application/json",
+        "Referer: ",
+        "subscription-key: $apiKey",
+    ];
+    if ($lat && $long) {
+        $headers[] = "X-Search-Location: lat:$lat;long:$long;re:$re";
     }
-}
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        throw new Exception('cURL Error: ' . curl_error($ch));
+    }
+
+    curl_close($ch);
+
+    $searchResults = json_decode($response, true);
+
+    $searchResults['latitude'] = $lat;
+    $searchResults['longitude'] = $long;
+
+    return json_encode($searchResults);
+}           
+
+    if ($apiType == 'images') {
+        $apiKey1 = getenv('bing_image_search_api_key1');
+        $apiKey2 = getenv('bing_image_search_api_key2');
+        $response = fetch_with_image_api_key($apiKey1, $searchTerm, $offset);
+        if ($response === false) {
+            $response = fetch_with_image_api_key($apiKey2, $searchTerm, $offset);
+        }
+    } elseif ($apiType == 'videos') {
+        $apiKey1 = getenv('bing_video_search_api_key1');
+        $apiKey2 = getenv('bing_video_search_api_key2');
+        $response = fetch_with_video_api_key($apiKey1, $searchTerm, $offset);
+        if ($response === false) {
+            $response = fetch_with_video_api_key($apiKey2, $searchTerm, $offset);
+        }
+    } elseif ($apiType == 'news') {
+        $apiKey1 = getenv('bing_news_search_api_key1');
+        $apiKey2 = getenv('bing_news_search_api_key2');
+        $response = fetch_with_news_api_key($apiKey1, $searchTerm, $offset);
+        if ($response === false) {
+            $response = fetch_with_news_api_key($apiKey2, $searchTerm, $offset);
+        }
+    } else {
+        $apiKey1 = getenv('bing_web_search_api_key1');
+        $apiKey2 = getenv('bing_web_search_api_key2');
+    
+        $response = fetch_with_api_key($apiKey1, $searchTerm, $offset, $userIp, $sentLat, $sentLong);
+        if ($response === false) {
+            $response = fetch_with_api_key($apiKey2, $searchTerm, $offset, $userIp, $sentLat, $sentLong);
+        }
+    }    
 
 header('Content-Type: application/json');
 if ($apiType == 'merriamWebster') {

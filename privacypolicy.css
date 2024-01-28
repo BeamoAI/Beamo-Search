@@ -1,0 +1,45 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 80vw;
+    margin: 0 auto;
+    padding: 0 2vw;
+}
+
+img {
+    width: 25vw;
+    display: block;
+    margin: 1vh auto;
+}
+
+h1 {
+    font-size: 2.2vw;
+    text-align: center;
+    margin-bottom: 1vh;
+    border-bottom: 0.1vw solid #ccc;
+    padding-bottom: 0.5vh;
+}
+
+h2 {
+    font-size: 1.6vw;
+    margin-bottom: 1vh;
+}
+
+p {
+    font-size: 1.1vw;
+    margin-bottom: 1vh;
+}
+
+ul {
+    margin-bottom: 1vh;
+}
+
+a {
+    color: #0080ff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

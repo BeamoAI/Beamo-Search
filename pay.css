@@ -1,0 +1,12 @@
+.logout-container {
+    text-align: center;
+    margin-top: 4vh;
+}
+
+.logout-button {
+    padding: 1vh 4vw;
+    background-color: #f00;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 1vh;
+}
