@@ -1,4 +1,4 @@
-# Beamo Search Setup Guide (For Debian Based Systems)
+# Beamo Search Setup Guide
 
 ## License Overview
 This GitHub project, Beamo Search, is licensed under the Creative Commons Attribution-NonCommercial (CC BY-NC) license. This allows for personal use, modification, and distribution of this software, as long as it is not for commercial purposes. You must also credit "Beamo" as the original creator. For full license details, see [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
@@ -12,6 +12,8 @@ This guide outlines the steps for setting up Beamo Search, a powerful search eng
 - A Debian-based system with `sudo` privileges.
 - Access to the terminal/command line.
 - Git installed on your system.
+
+If you do not have a debian based system, get one for free at [Replit](https://repl.it) in order to run the apache2 server and make your changes on. It is possible to do it on other systems, but those are not covered in this guide and most of them are harder to get started on.
 
 ## Step-by-Step Instructions
 
@@ -149,73 +151,5 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
    - Ensure that the `ca.pem` file in the `/etc/apache2` directory is kept secure and is only accessible by the root user or the Apache process.
    - Regularly renew your SSL certificates and keep your OpenSSL version updated and make sure that they do not expire.
 
-By following these steps, you will have configured HTTPS for your Apache server using a self-signed certificate stored as `ca.pem` in the `/etc/apache2` directory. This is suitable for testing and development purposes. For a production environment, consider obtaining a certificate from a trusted certificate authority (CA).
-
-# Beamo Search Setup Guide (For Windows 10/11 Systems)
-
-## Prerequisites For This Specific Setup
-- A Windows 10/11 system.
-- Access to PowerShell or Command Prompt as an Administrator.
-- [Git for Windows](https://git-scm.com/download/win) installed on your system.
-
-## Step-by-Step Instructions
-
-### Clone Beamo Search Repository
-First, clone the Beamo Search repository from GitHub using Git Bash or PowerShell:
-```bash
-git clone https://github.com/BeamoAI/Beamo-Search.git
-```
-
-### Install Apache and PHP
-1. Download and install a Windows distribution of Apache, such as [XAMPP](https://www.apachefriends.org/download.html) or [ApacheHaus](https://www.apachehaus.com/cgi-bin/download.plx).
-2. Ensure that PHP 8.1 is included in the distribution or install it separately if necessary from [PHP for Windows](https://windows.php.net/download/).
-
-### Configure Apache
-1. Open the Apache configuration file (`httpd.conf`) typically located in the Apache installation directory, e.g., `C:\Apache24\conf\httpd.conf`.
-2. Enable necessary modules by removing the comment (#) from the beginning of the line. For example:
-   ```
-   LoadModule rewrite_module modules/mod_rewrite.so
-   LoadModule ssl_module modules/mod_ssl.so
-   ```
-
-### Configure Virtual Hosts
-1. Open the `httpd-vhosts.conf` file, typically located at `C:\Apache24\conf\extra\httpd-vhosts.conf`.
-2. Configure your virtual hosts. You can use the files from the Beamo Search repository as a reference.
-
-### Adjust Windows Firewall
-1. Open Windows Firewall and allow Apache HTTP Server to communicate on private and public networks.
-
-### Move The Contents of Beamo-Search Folder
-1. Copy all the contents inside the `Beamo-Search` folder to the Apache root directory, which is typically `C:\Apache24\htdocs` on Windows.
-2. Remove the `Beamo-Search` folder after copying its contents.
-
-### Edit Environment Variables for API Keys
-1. Search for 'Environment Variables' in your Windows search bar and open the system properties dialog.
-2. Under the 'System Variables' section, add your API keys as new variables.
-
-### Restart Apache
-1. Open the control panel for your Apache distribution and restart Apache to apply all the changes.
-
-### Obtain Server IP Address
-1. Open PowerShell or Command Prompt and type:
-   ```bash
-   ipconfig
-   ```
-   Look for the IPv4 address.
-
-### Configure HTTPS (Optional)
-To configure HTTPS, you'll need to generate an SSL certificate and configure Apache to use it. This involves using tools like OpenSSL which comes with Git for Windows or may be included in your Apache distribution.
-
-1. **Generate a Private Key and Certificate**:
-   Use OpenSSL to generate a private key and certificate:
-   ```bash
-   openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt
-   ```
-
-2. **Configure Apache to Use the Certificate**:
-   Update the `httpd-ssl.conf` file, typically located at `C:\Apache24\conf\extra\httpd-ssl.conf` with the paths to your new `server.key` and `server.crt` files.
-
-3. **Restart Apache**:
-   Restart Apache to apply the SSL configuration changes.
 
 Beamo Search © 2024 by Beamo LLC is licensed under Attribution-NonCommercial 4.0 International
