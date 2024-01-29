@@ -237,7 +237,8 @@ Certainly! Here's the revised section of the README file that includes steps for
    ![Opening System and Security](/images/SystemandSecurityScreenshot.jpeg)
    ![Opening Windows Defender Firewall](/images/Defenderscreenshot.jpeg)
    ![Opening Advanced Settings](/images/AdvancedSettingsScreenshot.jpeg)
-   ![Viewing Inbound and Outbound Rules](/images/InboundOutboundRulesScreenshot.jpeg)
+   ![Viewing Inbound Rules](/images/InboundFirewallRules.jpeg)
+   ![Viewing Outbound Rules](/images/Outboundrulesscreenshot.jpeg)
 
    If these rules are present, the firewall has been configured successfully.
 
