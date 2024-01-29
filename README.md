@@ -171,6 +171,7 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
 
 
 2. Restart your computer if required.
+3. If it does not open after installing, try opening the `Ubuntu` app on your computer and then it should work. If you encounter further issues after this, post an issue in the `issues` tab.
 
 ### Initial Setup for Ubuntu
 1. Upon first launch, you'll be prompted to create a user and password for Ubuntu.
@@ -193,6 +194,8 @@ sudo apt-get autoremove
 sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
 ```
 
+Certainly! Here's the revised section of the README file that includes steps for creating both inbound and outbound firewall rules for HTTP and HTTPS, with the rules named "Beamo Search Inbound HTTP", "Beamo Search Inbound HTTPS", "Beamo Search Outbound HTTP", and "Beamo Search Outbound HTTPS":
+
 ### Adjust the Firewall
 
 1. **Open PowerShell as Administrator**:
@@ -205,26 +208,38 @@ sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
 2. **Create Inbound Rule for HTTP (Port 80)**:
    - In the PowerShell window, enter the following command to allow inbound HTTP traffic on port 80:
      ```powershell
-     New-NetFirewallRule -DisplayName "Beamo Search HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
+     New-NetFirewallRule -DisplayName "Beamo Search Inbound HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
      ```
 
 3. **Create Inbound Rule for HTTPS (Port 443)**:
    - Similarly, enter this command to allow inbound HTTPS traffic on port 443:
      ```powershell
-     New-NetFirewallRule -DisplayName "Beamo Search HTTPS" -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow
+     New-NetFirewallRule -DisplayName "Beamo Search Inbound HTTPS" -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow
      ```
 
-4. **Verification**:
-   - You can verify the new rules have been added by going to Control Panel > System and Security > Windows Defender Firewall > Advanced Settings > Inbound Rules. Look for "Beamo Search HTTP" and "Beamo Search HTTPS" in the list.
+4. **Create Outbound Rule for HTTP (Port 80)**:
+   - Enter the following command to allow outbound HTTP traffic on port 80:
+     ```powershell
+     New-NetFirewallRule -DisplayName "Beamo Search Outbound HTTP" -Direction Outbound -Protocol TCP -LocalPort 80 -Action Allow
+     ```
 
-   ![Opening Control Pannel](/images/controlpannelscreenshot.jpeg)
+5. **Create Outbound Rule for HTTPS (Port 443)**:
+   - Enter this command to allow outbound HTTPS traffic on port 443:
+     ```powershell
+     New-NetFirewallRule -DisplayName "Beamo Search Outbound HTTPS" -Direction Outbound -Protocol TCP -LocalPort 443 -Action Allow
+     ```
+
+6. **Verification**:
+   - You can verify the new rules have been added by going to Control Panel > System and Security > Windows Defender Firewall > Advanced Settings. 
+   - Check both "Inbound Rules" and "Outbound Rules" for "Beamo Search Inbound HTTP", "Beamo Search Inbound HTTPS", "Beamo Search Outbound HTTP", and "Beamo Search Outbound HTTPS".
+
+   ![Opening Control Panel](/images/controlpannelscreenshot.jpeg)
    ![Opening System and Security](/images/SystemandSecurityScreenshot.jpeg)
    ![Opening Windows Defender Firewall](/images/Defenderscreenshot.jpeg)
    ![Opening Advanced Settings](/images/AdvancedSettingsScreenshot.jpeg)
-   ![Opening Inbound Rules](/images/Inboundrules.jpeg)
-   ![Opening Inbound Firewall Rules](/images/InboundFirewallRules.jpeg)
+   ![Viewing Inbound and Outbound Rules](/images/InboundOutboundRulesScreenshot.jpeg)
 
-   If those rules are there, everything has been successful.
+   If these rules are present, the firewall has been configured successfully.
 
 ### Enable PHP and Apache2 Modules
 ```bash
