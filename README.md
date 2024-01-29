@@ -222,7 +222,7 @@ sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
    ![Opening Windows Defender Firewall](/images/Defenderscreenshot.jpeg)
    ![Opening Advanced Settings](/images/AdvancedSettingsScreenshot.jpeg)
    ![Opening Inbound Rules](/images/Inboundrules.jpeg)
-   ![Opening Inbound Firewall Rules](/images/Inboundrules.jpeg)
+   ![Opening Inbound Firewall Rules](/images/InboundFirewallRules.jpeg)
 
 ### Enable PHP and Apache2 Modules
 ```bash
