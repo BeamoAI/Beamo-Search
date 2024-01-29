@@ -224,6 +224,8 @@ sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
    ![Opening Inbound Rules](/images/Inboundrules.jpeg)
    ![Opening Inbound Firewall Rules](/images/InboundFirewallRules.jpeg)
 
+   If those rules are there, everything has been successful.
+
 ### Enable PHP and Apache2 Modules
 ```bash
 sudo a2enmod php8.1
