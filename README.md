@@ -154,8 +154,6 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
    - Ensure that the `ca.pem` file in the `/etc/apache2` directory is kept secure and is only accessible by the root user or the Apache process.
    - Regularly renew your SSL certificates and keep your OpenSSL version updated and make sure that they do not expire.
 
-By following these steps, you will have configured HTTPS for your Apache server using a self-signed certificate stored as `ca.pem` in the `/etc/apache2` directory. This is suitable for testing and development purposes. For a production environment, consider obtaining a certificate from a trusted certificate authority (CA).
-
 
 # Beamo Search Setup Guide for Windows
 
@@ -170,6 +168,8 @@ By following these steps, you will have configured HTTPS for your Apache server 
    wsl --install
    ```
 2. Restart your computer if required.
+
+![Beamo Logo](Powershellrunasadministrator.jpeg)
 
 ### Initial Setup for Ubuntu
 1. Upon first launch, you'll be prompted to create a user and password for Ubuntu.
@@ -192,16 +192,14 @@ sudo apt-get autoremove
 sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
 ```
 
-Certainly! The section for adjusting the firewall for the Beamo Search setup guide can be updated to reflect the steps for configuring the Windows Firewall settings when using WSL. Here is the revised section:
-
-Certainly, I can revise the section to include instructions for running PowerShell as an administrator and entering the commands to adjust the Windows Firewall settings. Here's the updated section:
-
 ### Adjust the Firewall
 
 1. **Open PowerShell as Administrator**:
    - Click on the Start menu, type `PowerShell`.
    - Right-click on `Windows PowerShell` and select `Run as administrator`.
    - If prompted by User Account Control (UAC), click `Yes` to allow PowerShell to run with administrative privileges.
+
+   ![Beamo Logo](Powershellrunasadministrator.jpeg)
 
 2. **Create Inbound Rule for HTTP (Port 80)**:
    - In the PowerShell window, enter the following command to allow inbound HTTP traffic on port 80:
