@@ -167,9 +167,9 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
    ```powershell
    wsl --install
    ```
-   ![Beamo Logo](Powershellrunasadministrator.jpeg)
+   ![Running Powershell As Administrator](/images/Powershellrunasadministrator.jpeg)
 
-   
+
 2. Restart your computer if required.
 
 ### Initial Setup for Ubuntu
@@ -200,7 +200,7 @@ sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
    - Right-click on `Windows PowerShell` and select `Run as administrator`.
    - If prompted by User Account Control (UAC), click `Yes` to allow PowerShell to run with administrative privileges.
 
-   ![Beamo Logo](Powershellrunasadministrator.jpeg)
+   ![Running Powershell As Administrator](/images/Powershellrunasadministrator.jpeg)
 
 2. **Create Inbound Rule for HTTP (Port 80)**:
    - In the PowerShell window, enter the following command to allow inbound HTTP traffic on port 80:
@@ -217,6 +217,12 @@ sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
 4. **Verification**:
    - You can verify the new rules have been added by going to Control Panel > System and Security > Windows Defender Firewall > Advanced Settings > Inbound Rules. Look for "Beamo Search HTTP" and "Beamo Search HTTPS" in the list.
 
+   ![Opening Control Pannel](/images/controlpannelscreenshot.jpeg)
+   ![Opening System and Security](/images/SystemandSecurityScreenshot.jpeg)
+   ![Opening Windows Defender Firewall](/images/Defenderscreenshot.jpeg)
+   ![Opening Advanced Settings](/images/AdvancedSettingsScreenshot.jpeg)
+   ![Opening Inbound Rules](/images/Inboundrules.jpeg)
+   ![Opening Inbound Firewall Rules](/images/Inboundrules.jpeg)
 
 ### Enable PHP and Apache2 Modules
 ```bash
