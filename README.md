@@ -171,14 +171,9 @@ By following these steps, you will have configured HTTPS for your Apache server 
    ```
 2. Restart your computer if required.
 
-### Install Ubuntu on WSL
-1. Open the Microsoft Store and search for "Ubuntu".
-2. Select the latest version of Ubuntu and click "Get" to install it.
-3. Once installed, launch Ubuntu from the Start Menu.
-
 ### Initial Setup for Ubuntu
 1. Upon first launch, you'll be prompted to create a user and password for Ubuntu.
-2. Update and upgrade the Ubuntu packages:
+2. Update all the packages for reliability
    ```bash
    sudo apt update && sudo apt upgrade
    ```
@@ -197,8 +192,32 @@ sudo apt-get autoremove
 sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
 ```
 
+Certainly! The section for adjusting the firewall for the Beamo Search setup guide can be updated to reflect the steps for configuring the Windows Firewall settings when using WSL. Here is the revised section:
+
+Certainly, I can revise the section to include instructions for running PowerShell as an administrator and entering the commands to adjust the Windows Firewall settings. Here's the updated section:
+
 ### Adjust the Firewall
-WSL does not require firewall adjustments as it uses the Windows firewall settings.
+
+1. **Open PowerShell as Administrator**:
+   - Click on the Start menu, type `PowerShell`.
+   - Right-click on `Windows PowerShell` and select `Run as administrator`.
+   - If prompted by User Account Control (UAC), click `Yes` to allow PowerShell to run with administrative privileges.
+
+2. **Create Inbound Rule for HTTP (Port 80)**:
+   - In the PowerShell window, enter the following command to allow inbound HTTP traffic on port 80:
+     ```powershell
+     New-NetFirewallRule -DisplayName "Beamo Search HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
+     ```
+
+3. **Create Inbound Rule for HTTPS (Port 443)**:
+   - Similarly, enter this command to allow inbound HTTPS traffic on port 443:
+     ```powershell
+     New-NetFirewallRule -DisplayName "Beamo Search HTTPS" -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow
+     ```
+
+4. **Verification**:
+   - You can verify the new rules have been added by going to Control Panel > System and Security > Windows Defender Firewall > Advanced Settings > Inbound Rules. Look for "Beamo Search HTTP" and "Beamo Search HTTPS" in the list.
+
 
 ### Enable PHP and Apache2 Modules
 ```bash
