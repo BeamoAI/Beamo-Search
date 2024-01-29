@@ -194,9 +194,65 @@ sudo apt-get autoremove
 sudo apt install php8.1 php8.1-curl libapache2-mod-php8.1
 ```
 
-Certainly! Here's the revised section of the README file that includes steps for creating both inbound and outbound firewall rules for HTTP and HTTPS, with the rules named "Beamo Search Inbound HTTP", "Beamo Search Inbound HTTPS", "Beamo Search Outbound HTTP", and "Beamo Search Outbound HTTPS":
+### Enable PHP and Apache2 Modules
+```bash
+sudo a2enmod php8.1
+sudo a2enmod rewrite
+sudo a2enmod env
+sudo a2enmod headers
+sudo a2enmod ssl
+sudo phpenmod curl
+```
 
-### Adjust the Firewall
+### Configure Virtual Hosts and Apache
+```bash
+sudo mv Beamo-Search/000-default.conf /etc/apache2/sites-available/
+sudo mv Beamo-Search/default-ssl.conf /etc/apache2/sites-available/
+sudo mv Beamo-Search/apache2.conf /etc/apache2
+sudo mv Beamo-Search/envvars /etc/apache2
+sudo a2ensite 000-default.conf
+sudo a2ensite default-ssl.conf
+```
+
+### Move The Default Self-Signed SSL Certificate to The Proper File Path
+```bash
+sudo mv Beamo-Search/ca.pem /etc/apache2
+```
+
+### Configure API Keys Inside of envvars
+```bash
+sudo nano /etc/apache2/envvars
+```
+
+### Move Contents of Beamo-Search Folder to Apache Root Directory
+```bash
+sudo mv Beamo-Search/* /var/www/html/
+sudo rm -r Beamo-Search
+```
+
+### Restart Apache2
+```bash
+sudo systemctl restart apache2
+```
+
+### Navigate to Beamo Search on localhost using HTTPS
+
+`https://localhost`
+
+
+
+
+Or gather the public IP address if you have properly configured your internet connection and computer settings and navigate there if you would like to. Instructions on how to configure your computer settings are below if you would like this to be on the public internet.
+
+```bash
+curl -s ifconfig.me
+```
+
+Navigate to the returned IP address.
+
+### Adjust the Firewall (Optional)
+
+## Only do this if you would like to host Beamo Search to the public internet
 
 1. **Open PowerShell as Administrator**:
    - Click on the Start menu, type `PowerShell`.
@@ -241,52 +297,6 @@ Certainly! Here's the revised section of the README file that includes steps for
    ![Viewing Outbound Rules](/images/Outboundrulesscreenshot.jpeg)
 
    If these rules are present, the firewall has been configured successfully.
-
-### Enable PHP and Apache2 Modules
-```bash
-sudo a2enmod php8.1
-sudo a2enmod rewrite
-sudo a2enmod env
-sudo a2enmod headers
-sudo a2enmod ssl
-sudo phpenmod curl
-```
-
-### Configure Virtual Hosts and Apache
-```bash
-sudo mv Beamo-Search/000-default.conf /etc/apache2/sites-available/
-sudo mv Beamo-Search/default-ssl.conf /etc/apache2/sites-available/
-sudo mv Beamo-Search/apache2.conf /etc/apache2
-sudo mv Beamo-Search/envvars /etc/apache2
-sudo a2ensite 000-default.conf
-sudo a2ensite default-ssl.conf
-```
-
-### Move The Default Self-Signed SSL Certificate to The Proper File Path
-```bash
-sudo mv Beamo-Search/ca.pem /etc/apache2
-```
-
-### Configure API Keys Inside of envvars
-```bash
-sudo nano /etc/apache2/envvars
-```
-
-### Move Contents of Beamo-Search Folder to Apache Root Directory
-```bash
-sudo mv Beamo-Search/* /var/www/html/
-sudo rm -r Beamo-Search
-```
-
-### Restart Apache2
-```bash
-sudo systemctl restart apache2
-```
-
-### Obtain Server IP Address
-```bash
-curl -s ifconfig.me
-```
 
 ### Configure HTTPS (Optional)
 
