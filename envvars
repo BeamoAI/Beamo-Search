@@ -1,0 +1,29 @@
+# These variables are for the Apache runtime environment
+
+export APACHE_RUN_DIR=/var/run/apache2
+export APACHE_LOG_DIR=/var/log/apache2
+export APACHE_RUN_USER=www-data
+export APACHE_RUN_GROUP=www-data
+export APACHE_PID_FILE=$APACHE_RUN_DIR/apache2.pid
+
+# EDIT EVERYTHING BELOW TO BE YOUR OWN API KEYS
+export claude_key="REPLACE WITH YOUR OWN ANTHROPIC API KEY"
+
+# You can use the same Bing API key for all of these below in this section,
+# we just have separate values in order to save costs on certain search types
+# and you can do the same with different keys in different pricing tiers
+
+export bing_image_search_api_key1="REPLACE WITH YOUR OWN BING API KEY"
+export bing_image_search_api_key2="REPLACE WITH YOUR OWN BING API KEY"
+export bing_video_search_api_key1="REPLACE WITH YOUR OWN BING API KEY"
+export bing_video_search_api_key2="REPLACE WITH YOUR OWN BING API KEY"
+export bing_news_search_api_key1="REPLACE WITH YOUR OWN BING API KEY"
+export bing_news_search_api_key2="REPLACE WITH YOUR OWN BING API KEY"
+export bing_web_search_api_key1="REPLACE WITH YOUR OWN BING API KEY"
+export bing_web_search_api_key2="REPLACE WITH YOUR OWN BING API KEY"
+# END SECTION OF BING API KEYS
+
+export ANYSCALE_ENDPOINT_API_KEY="REPLACE WITH YOUR OWN ANYSCALE ENDPOINT API KEY"
+export IP_API_GEOLOCATION_API_KEY="REPLACE WITH YOUR OWN IP API KEY"
+export TIMEZONEDB_API_KEY="REPLACE WITH YOUR OWN TIMEZONEDB API KEY"
+# END EDITING OF API KEYS
