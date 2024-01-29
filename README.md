@@ -167,9 +167,8 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
    ```powershell
    wsl --install
    ```
+   ![Beamo Logo](Powershellrunasadministrator.jpeg)
 2. Restart your computer if required.
-
-![Beamo Logo](Powershellrunasadministrator.jpeg)
 
 ### Initial Setup for Ubuntu
 1. Upon first launch, you'll be prompted to create a user and password for Ubuntu.
