@@ -1,21 +1,15 @@
-# Beamo Search Setup Guide
-
 ## License Overview
 This GitHub project, Beamo Search, is licensed under the Creative Commons Attribution-NonCommercial (CC BY-NC) license. This allows for personal use, modification, and distribution of this software, as long as it is not for commercial purposes. You must also credit "Beamo" as the original creator. For full license details, see [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
 ## Introduction
-This guide outlines the steps for setting up Beamo Search, a powerful search engine software. It's designed to be easily set up on a Debian-based system.
+This guide outlines the steps for setting up Beamo Search, the world's smartest search engine. It's designed to be easily set up on a Debian-based system or a Windows 10/11 system.
 
-# Setup For Debian Based Systems
+# Beamo Search Setup Guide For Debian-Based Systems
 
 ## Prerequisites For This Specific Setup
 - A Debian-based system with `sudo` privileges.
 - Access to the terminal/command line.
-- Git installed on your system.
-
-If you do not have a debian based system, get one for free at [Replit](https://repl.it) in order to run the apache2 server and make your changes on. It is possible to do it on other systems, but those are not covered in this guide and most of them are harder to get started on.
-
-## Step-by-Step Instructions
+- Git installed on your system. (It should be installed by default on all Debian-based Systems)
 
 ### Clone Beamo Search Repository
 First, clone the Beamo Search repository from GitHub:
@@ -80,6 +74,8 @@ Sign up for your own API keys and configure them inside of the `envvars` file. L
 4. [IP API (Geolocation Key) Sign Up](https://members.ip-api.com/)
 5. [Timezonedb API Sign Up](https://timezonedb.com/register)
 
+For Anthropic, you can just sign up for a free, personal API key, you can use a free Azure credit for the Bing Search API, you can use the free 1 million tokens within the first 30 days of sign-up for Anyscale, and then IP API, and Timezonedb are free.
+
 ### Configure API Keys Inside of envvars
 ```bash
 sudo nano /etc/apache2/envvars
@@ -96,12 +92,22 @@ sudo rm -r Beamo-Search
 sudo systemctl restart apache2
 ```
 
-### Obtain Server IP Address
+### Navigate to Beamo Search on localhost using HTTPS
+
+`https://localhost`
+
+
+Or gather the public IP address if you have properly configured your internet connection and computer settings and navigate there if you would like to. Instructions on how to configure your computer settings are below if you would like this to be on the public internet.
+
 ```bash
 curl -s ifconfig.me
 ```
 
+Navigate to the returned IP address.
+
 ### Configure HTTPS (Optional)
+
+## You Should Only Do This If You Would Like To Host Beamo Search On The Public Internet
 
 To configure HTTPS for secure communication, you will need to generate an SSL certificate and a private key. Below are the instructions to create a PEM file named `ca.pem`, containing both the private key and the certificate, and store it in the `/etc/apache2` directory. The self-signed certificate already works but if you want to generate your own, here is the guide. (You will need to have a URL domain in order for SSL to truly be enabled).
 
@@ -160,7 +166,6 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
 ## Prerequisites
 - A Windows 10/11 system
 - Administrative privileges on your system
-- Git installed on your system
 
 ### Enable Windows Subsystem for Linux (WSL)
 1. Open PowerShell as Administrator and run:
@@ -219,10 +224,20 @@ sudo a2ensite default-ssl.conf
 sudo mv Beamo-Search/ca.pem /etc/apache2
 ```
 
-### Configure API Keys Inside of envvars
+### Configure API Keys Inside of envvars With Your Own API Keys
 ```bash
 sudo nano /etc/apache2/envvars
 ```
+
+These are the links where you can grab your API keys for each service:
+
+1. [Anthropic API](https://console.anthropic.com/login)
+2. [Bing Search API](https://www.microsoft.com/en-us/bing/apis/bing-web-search-api)
+3. [Anyscale Endpoints API](https://app.endpoints.anyscale.com/welcome)
+4. [IP API (Geolocation Key) Sign Up](https://members.ip-api.com/)
+5. [Timezonedb API Sign Up](https://timezonedb.com/register)
+
+For Anthropic, you can just sign up for a free, personal API key, you can use a free Azure credit for the Bing Search API, you can use the free 1 million tokens within the first 30 days of sign-up for Anyscale, and then IP API, and Timezonedb are free.
 
 ### Move Contents of Beamo-Search Folder to Apache Root Directory
 ```bash
@@ -240,8 +255,6 @@ sudo systemctl restart apache2
 `https://localhost`
 
 
-
-
 Or gather the public IP address if you have properly configured your internet connection and computer settings and navigate there if you would like to. Instructions on how to configure your computer settings are below if you would like this to be on the public internet.
 
 ```bash
@@ -252,7 +265,7 @@ Navigate to the returned IP address.
 
 ### Adjust the Firewall (Optional)
 
-## Only do this if you would like to host Beamo Search to the public internet
+## You Should Only Do This If You Would Like To Host Beamo Search On The Public Internet
 
 1. **Open PowerShell as Administrator**:
    - Click on the Start menu, type `PowerShell`.
@@ -299,6 +312,8 @@ Navigate to the returned IP address.
    If these rules are present, the firewall has been configured successfully.
 
 ### Configure HTTPS (Optional)
+
+## You Should Only Do This If You Would Like To Host Beamo Search On The Public Internet
 
 To configure HTTPS for secure communication, you will need to generate an SSL certificate and a private key. Below are the instructions to create a PEM file named `ca.pem`, containing both the private key and the certificate, and store it in the `/etc/apache2` directory. The self-signed certificate already works but if you want to generate your own, here is the guide. (You will need to have a URL domain in order for SSL to truly be enabled).
 
