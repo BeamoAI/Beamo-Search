@@ -168,6 +168,8 @@ To configure HTTPS for secure communication, you will need to generate an SSL ce
    wsl --install
    ```
    ![Beamo Logo](Powershellrunasadministrator.jpeg)
+
+   
 2. Restart your computer if required.
 
 ### Initial Setup for Ubuntu
