@@ -1,8 +1,12 @@
 ## License Overview
 This GitHub project, Beamo Search, is licensed under the Creative Commons Attribution-NonCommercial (CC BY-NC) license. This allows for personal use, modification, and distribution of this software, as long as it is not for commercial purposes. You must also credit "Beamo" as the original creator. For full license details, see [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 
+# What is Beamo Search?
+
+Beamo Search is a search engine that is focused on being the world's smartest search engine. It uses many generative AI features in order to make it more advanced. It is in the beginning stages right now, but will quickly progress to by far be the most advanced search engine in the world.
+
 ## Introduction
-This guide outlines the steps for setting up Beamo Search, the world's smartest search engine. It's designed to be easily set up on a Debian-based system or a Windows 10/11 system.
+This guide outlines the steps for setting up Beamo Search, which is focused on being the world's smartest search engine. It's designed to be easily set up on a Debian-based system or a Windows 10/11 system.
 
 # Beamo Search Setup Guide for Windows
 
