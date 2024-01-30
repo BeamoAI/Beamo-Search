@@ -4,6 +4,9 @@ This GitHub project, Beamo Search, is licensed under the Creative Commons Attrib
 ## Introduction
 This guide outlines the steps for setting up Beamo Search, the world's smartest search engine. It's designed to be easily set up on a Debian-based system or a Windows 10/11 system.
 
+[Debian-Based System Setup](#line-10)
+[Windows 10/11 Setup](#line-167).
+
 # Beamo Search Setup Guide For Debian-Based Systems
 
 ## Prerequisites For This Specific Setup
