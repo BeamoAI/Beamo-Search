@@ -1,7 +1,7 @@
 User-agent: *
-Disallow: /results.html
-Disallow: /privacy
-Disallow: /notfound.html
-Disallow: /setaspage.html
+Disallow: /html/results.html
+Disallow: /html/privacypolicy.html
+Disallow: /html/notfound.html
+Disallow: /html/setaspage.html
 
 Sitemap: https://beamosearch.com/sitemap.xml

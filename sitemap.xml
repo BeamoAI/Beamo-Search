@@ -7,25 +7,19 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://beamosearch.com/results.html</loc>
+    <loc>https://beamosearch.com/html/results.html</loc>
     <lastmod>2023-04-07</lastmod>
     <changefreq>never</changefreq>
     <priority>0</priority>
   </url>
   <url>
-    <loc>https://beamosearch.com/privacy</loc>
+    <loc>https://beamosearch.com/html/privacypolicy.html</loc>
     <lastmod>2023-04-07</lastmod>
     <changefreq>never</changefreq>
     <priority>0</priority>
   </url>
   <url>
-    <loc>https://beamosearch.com/notfound.html</loc>
-    <lastmod>2023-04-07</lastmod>
-    <changefreq>never</changefreq>
-    <priority>0</priority>
-  </url>
-  <url>
-    <loc>https://beamosearch.com/setaspage.html</loc>
+    <loc>https://beamosearch.com/html/notfound.html</loc>
     <lastmod>2023-04-07</lastmod>
     <changefreq>never</changefreq>
     <priority>0</priority>

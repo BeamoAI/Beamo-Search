@@ -19,7 +19,7 @@ This guide outlines the steps for setting up Beamo Search, which is focused on b
    ```powershell
    wsl --install
    ```
-   ![Running Powershell As Administrator](/images/Powershellrunasadministrator.jpeg)
+   ![Running Powershell As Administrator](/guideimages//Powershellrunasadministrator.jpeg)
 
 
 2. Restart your computer if required.
@@ -119,7 +119,7 @@ Navigate to the returned IP address.
    - Right-click on `Windows PowerShell` and select `Run as administrator`.
    - If prompted by User Account Control (UAC), click `Yes` to allow PowerShell to run with administrative privileges.
 
-   ![Running Powershell As Administrator](/images/Powershellrunasadministrator.jpeg)
+   ![Running Powershell As Administrator](/guideimages/Powershellrunasadministrator.jpeg)
 
 2. **Create Inbound Rule for HTTP (Port 80)**:
    - In the PowerShell window, enter the following command to allow inbound HTTP traffic on port 80:
@@ -149,12 +149,12 @@ Navigate to the returned IP address.
    - You can verify the new rules have been added by going to Control Panel > System and Security > Windows Defender Firewall > Advanced Settings. 
    - Check both "Inbound Rules" and "Outbound Rules" for "Beamo Search Inbound HTTP", "Beamo Search Inbound HTTPS", "Beamo Search Outbound HTTP", and "Beamo Search Outbound HTTPS".
 
-   ![Opening Control Panel](/images/controlpannelscreenshot.jpeg)
-   ![Opening System and Security](/images/SystemandSecurityScreenshot.jpeg)
-   ![Opening Windows Defender Firewall](/images/Defenderscreenshot.jpeg)
-   ![Opening Advanced Settings](/images/AdvancedSettingsScreenshot.jpeg)
-   ![Viewing Inbound Rules](/images/InboundFirewallRules.jpeg)
-   ![Viewing Outbound Rules](/images/Outboundrulesscreenshot.jpeg)
+   ![Opening Control Panel](/guideimages/controlpannelscreenshot.jpeg)
+   ![Opening System and Security](/guideimages/SystemandSecurityScreenshot.jpeg)
+   ![Opening Windows Defender Firewall](/guideimages/Defenderscreenshot.jpeg)
+   ![Opening Advanced Settings](/guideimages/AdvancedSettingsScreenshot.jpeg)
+   ![Viewing Inbound Rules](/guideimages/InboundFirewallRules.jpeg)
+   ![Viewing Outbound Rules](/guideimages/Outboundrulesscreenshot.jpeg)
 
    If these rules are present, the firewall has been configured successfully.
 
@@ -266,12 +266,6 @@ sudo a2ensite default-ssl.conf
 ### Move The Default Self-Signed SSL Certificate to The Proper File Path
 ```bash
 sudo mv Beamo-Search/ca.pem /etc/apache2
-```
-
-### Delete Unnecessary Windows Conf File as This is The Debian Version
-
-```bash
-sudo rm Beamo-Search/httpd.conf
 ```
 
 ### Sign Up For Your Own API Keys

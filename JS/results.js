@@ -126,7 +126,7 @@ document.title = searchTerm;
       prompt: prompt
     };
 
-    const response = await fetch("imageserver.php", {
+    const response = await fetch("/PHP/imageserver.php", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -140,7 +140,7 @@ document.title = searchTerm;
   function showLoader() {
     const loader = document.createElement('img');
     loader.className = 'loading-image loader-style';
-    loader.src = 'loading.webp';
+    loader.src = '/images/loading.webp';
     document.body.appendChild(loader);
   }
   
@@ -250,7 +250,7 @@ document.title = searchTerm;
       return Promise.resolve(cachedResponse);
     }
 
-    const eventSource = new EventSource(`summary.php?searchTerm=${encodeURIComponent(searchTerm)}&searchResults=${encodedSearchResults}`);
+    const eventSource = new EventSource(`/PHP/summary.php?searchTerm=${encodeURIComponent(searchTerm)}&searchResults=${encodedSearchResults}`);
     let result = "";
 
     let cycle = 1;
@@ -344,7 +344,7 @@ document.title = searchTerm;
         try {
           const response = await fetch(apiRequestUrl);
           if (response.status === 404) {
-            window.location.href = 'notfound.html';
+            window.location.href = '/html/notfound.html';
             return;
           } else if (!response.ok) {
             throw new Error('API request failed');
@@ -459,7 +459,7 @@ document.title = searchTerm;
     }
 
     async function sendRequestWithGeoData(searchTerm, latitude, longitude) {
-      let apiRequestUrl = `api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`;
+      let apiRequestUrl = `/PHP/api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`;
       if (typeof tryFetch === 'function') {
         await tryFetch(apiRequestUrl);
       }
@@ -472,7 +472,7 @@ document.title = searchTerm;
       localStorage.setItem('ipData', JSON.stringify(ipData));
       localStorage.setItem('ipDataTime', Date.now());
     
-      let apiRequestUrl = `api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&userIp=${encodeURIComponent(ipData.ip)}`;
+      let apiRequestUrl = `/PHP/api_request.php?searchTerm=${encodeURIComponent(searchTerm)}&userIp=${encodeURIComponent(ipData.ip)}`;
       if (typeof tryFetch === 'function') {
         await tryFetch(apiRequestUrl);
       }
@@ -564,7 +564,7 @@ document.title = searchTerm;
               button.onclick = function() {
                   const searchTerm = relatedSearch.displayText;
                   const offset = 0;
-                  const url = `results.html?q=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+                  const url = `/html/results.html?q=${encodeURIComponent(searchTerm)}&offset=${offset}`;
                   window.location.href = url;
               };
               relatedSearchesContainer.appendChild(button);
@@ -955,7 +955,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
   
       offset += 105;
 
-      const apiRequestUrl = `api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+      const apiRequestUrl = `/PHP/api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
       tryFetch(apiRequestUrl);
       shouldloadnewimagescrollresults = false;
     }
@@ -1050,7 +1050,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
     isVideoSearch = true;
     isAllSearch = false;
     isChatSearch = false;
-    const apiRequestUrl = `api_request.php?apiType=videos&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+    const apiRequestUrl = `/PHP/api_request.php?apiType=videos&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
     tryFetch(apiRequestUrl)
     fetchResults(0, 'videos')
   });
@@ -1065,7 +1065,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
       isAllSearch = false;
       isChatSearch = false;
       if (shouldloadnewimageresults) {
-      const apiRequestUrl = `api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+      const apiRequestUrl = `/PHP/api_request.php?apiType=images&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
       tryFetch(apiRequestUrl)
       fetchResults(0, 'images')
       const imageGrid = document.getElementById('imageGrid');
@@ -1084,7 +1084,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
     isVideoSearch = false;
     isAllSearch = false;
     isChatSearch = false;
-    const apiRequestUrl = `api_request.php?apiType=news&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
+    const apiRequestUrl = `/PHP/api_request.php?apiType=news&searchTerm=${encodeURIComponent(searchTerm)}&offset=${offset}`;
     tryFetch(apiRequestUrl)
   });
 
@@ -1116,7 +1116,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
   const lastSearchTerm = localStorage.getItem('lastSearchTerm');
 
   if (!lastSearchTerm || searchTerm !== lastSearchTerm) {
-    fetch('/deletechat.php', {
+    fetch('/PHP/deletechat.php', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1168,7 +1168,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
       const chat = document.createElement('button');
       chat.className = 'enter-button-style';
       const chatIcon = document.createElement('img');
-      chatIcon.src = 'arrow.webp';
+      chatIcon.src = '/images/arrow.webp';
       chatIcon.className = 'chat-icon';
       chat.appendChild(chatIcon);
       chatInputContainer.appendChild(chat);
@@ -1202,7 +1202,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
   
   async function sendInitialMessages(userMessage, assistantMessage) {
       const locationData = await getLocationData();
-      const apiRequestUrl = `chat.php?userMessage=${encodeURIComponent(userMessage)}&assistantMessage=${encodeURIComponent(assistantMessage)}&latitude=${locationData.latitude}&longitude=${locationData.longitude}`;
+      const apiRequestUrl = `/PHP/chat.php?userMessage=${encodeURIComponent(userMessage)}&assistantMessage=${encodeURIComponent(assistantMessage)}&latitude=${locationData.latitude}&longitude=${locationData.longitude}`;
       eventSource = new EventSource(apiRequestUrl);
   }
   
@@ -1258,7 +1258,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
       chatContainer.appendChild(aiMsgElement);
     
       const aiMsgImage = document.createElement('img');
-      aiMsgImage.src = assistantresponse ? 'tlog.webp' : 'lightningboltload.gif';
+      aiMsgImage.src = assistantresponse ? '/images/tlog.webp' : '/images/lightningboltload.gif';
       aiMsgImage.classList.add('ai-msg-image');
       aiMsgElement.appendChild(aiMsgImage);
     
@@ -1271,7 +1271,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
         assistantresponseInterval = setInterval(() => {
           if (assistantresponse !== prevAssistantresponse) {
             aiMsgText.textContent = assistantresponse;
-            aiMsgImage.src = assistantresponse ? 'tlog.webp' : 'lightningboltload.gif';
+            aiMsgImage.src = assistantresponse ? '/images/tlog.webp' : '/images/lightningboltload.gif';
             prevAssistantresponse = assistantresponse;
           }
         }, 5);
@@ -1305,7 +1305,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
       }
     
       getLocationData().then(({ latitude, longitude }) => {
-        const apiRequestUrl = `chat.php?userMessage=${encodeURIComponent(userMessage)}&assistantMessage=${encodeURIComponent(assistantresponse)}&latitude=${latitude}&longitude=${longitude}`;
+        const apiRequestUrl = `/PHP/chat.php?userMessage=${encodeURIComponent(userMessage)}&assistantMessage=${encodeURIComponent(assistantresponse)}&latitude=${latitude}&longitude=${longitude}`;
         eventSource = new EventSource(apiRequestUrl);
         let timeoutId;
 
@@ -1314,7 +1314,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
       chatContainer.appendChild(aiMsgElement);
 
       const aiMsgImage = document.createElement('img');
-      aiMsgImage.src = 'lightningboltload.gif';
+      aiMsgImage.src = '/images/lightningboltload.gif';
       aiMsgImage.classList.add('ai-msg-image');
       aiMsgElement.appendChild(aiMsgImage);
 
@@ -1339,7 +1339,7 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
       }        
 
       eventSource.onmessage = (event) => {
-        aiMsgImage.src = 'tlog.webp';
+        aiMsgImage.src = '/images/tlog.webp';
         const jsonString = event.data.replace(/^data:\s*/, '');
 
         if (!isValidJson(jsonString)) {

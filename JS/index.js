@@ -71,7 +71,7 @@ document.getElementById('chatBtn').addEventListener('click', (e) => {
   let existingChatInterface = document.getElementById('chat-interface');
   if (existingChatInterface) {
     existingChatInterface.remove();
-    fetch('deletechat.php');
+    fetch('/PHP/deletechat.php');
     return;
   }  
   const chromeExtensionLink = document.getElementById('chrome-extension-link');
@@ -102,7 +102,7 @@ document.getElementById('chatBtn').addEventListener('click', (e) => {
       let existingChatInterface = document.getElementById('chat-interface');
       if (existingChatInterface) {
         existingChatInterface.remove();
-        fetch('deletechat.php');
+        fetch('/PHP/deletechat.php');
       }
     }, 250);
   });  
@@ -111,14 +111,14 @@ document.getElementById('chatBtn').addEventListener('click', (e) => {
     chromeExtensionLink && (chromeExtensionLink.style.display = 'block');
     let existingChatInterface = document.getElementById('chat-interface');
     existingChatInterface && existingChatInterface.remove();
-    fetch('deletechat.php');
+    fetch('/PHP/deletechat.php');
   });
 
   const chat = document.createElement('button');
   chat.className = 'enter-button-style';
 
   const chatIcon = document.createElement('img');
-  chatIcon.src = 'arrow.webp';
+  chatIcon.src = '/images/arrow.webp';
   chatIcon.style.width = '100%';
   chatIcon.style.height = '100%';
   chat.appendChild(chatIcon);
@@ -192,7 +192,7 @@ document.getElementById('chatBtn').addEventListener('click', (e) => {
       }
     }
   
-    const apiRequestUrl = `chat.php?userMessage=${encodeURIComponent(userMessage)}&latitude=${latitude}&longitude=${longitude}`;
+    const apiRequestUrl = `/PHP/chat.php?userMessage=${encodeURIComponent(userMessage)}&latitude=${latitude}&longitude=${longitude}`;
     const eventSource = new EventSource(apiRequestUrl);
     let timeoutId;
   
@@ -200,7 +200,7 @@ document.getElementById('chatBtn').addEventListener('click', (e) => {
     aiMsgElement.classList.add('ai-msg-element');
   
     const aiMsgImage = document.createElement('img');
-    aiMsgImage.src = 'lightningboltload.gif';
+    aiMsgImage.src = '/images/lightningboltload.gif';
     aiMsgImage.classList.add('ai-msg-image');
   
     aiMsgElement.appendChild(aiMsgImage);
@@ -224,7 +224,7 @@ document.getElementById('chatBtn').addEventListener('click', (e) => {
     }        
   
     eventSource.onmessage = (event) => {
-      aiMsgImage.src = 'tlog.webp';
+      aiMsgImage.src = '/images/tlog.webp';
       const jsonString = event.data.replace(/^data:\s*/, '');
   
       if (!isValidJson(jsonString)) {
