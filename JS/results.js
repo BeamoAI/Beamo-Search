@@ -188,11 +188,14 @@ document.title = searchTerm;
           hideLoader();
         }
             } else if (/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i.test(searchTerm)) {
-              let url = searchTerm.match(/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i)[0];
+            let url = searchTerm.match(/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i)[0];
               if (!/^https?:\/\//i.test(url)) {
                 url = 'https://' + url;
-              }
-              window.location.href = url;
+            }
+            
+            url = encodeURI(url); 
+            window.location.href = url;  
+
             } else if (/weather|forecast|temperature|rain|snow|storm|what'?s the weather|current weather|weather today|weekend weather|weather report|is it going to rain|will it snow|storm prediction|temperature today|temperature tomorrow/i.test(searchTerm)) {
             const redirectToWeatherForecast = async () => {
                 if ('geolocation' in navigator) {
@@ -485,11 +488,12 @@ document.title = searchTerm;
       if (searchTermWithoutSpaces === 'calculator' || isValidMathExpression(searchTermWithoutSpaces)) {
         calculatorContainer.style.display = 'grid';
         generateCalculator();
-  
+    
         if (isValidMathExpression(searchTermWithoutSpaces)) {
           let calculatorDisplay = document.getElementById('calculator-display');
           try {
-            calculatorDisplay.textContent = eval(searchTermWithoutSpaces);
+            const result = calculate(searchTermWithoutSpaces);
+            calculatorDisplay.textContent = result;
           } catch (error) {
             calculatorDisplay.textContent = 'Error';
           }
@@ -498,6 +502,59 @@ document.title = searchTerm;
         calculatorContainer.style.display = 'none';
       }
     };
+    
+    function calculate(expression) {
+      const allowedOperators = ['+', '-', '*', '/', '(', ')'];
+      const tokens = expression.split('').filter(char => allowedOperators.includes(char) || !isNaN(char));
+      let stack = [];
+    
+      for (let token of tokens) {
+        if (!isNaN(token)) {
+          stack.push(Number(token));
+        } else if (token === '(') {
+            stack.push(token); 
+        } else if (token === ')') {
+          let subExprResult = 0;
+          while (stack.length && stack[stack.length - 1] !== '(') {
+            subExprResult = performOperation(stack.pop(), stack.pop(), subExprResult); 
+          }
+          stack.pop();
+          stack.push(subExprResult);
+        } else { 
+          while (stack.length && hasPrecedence(token, stack[stack.length - 1])) {
+            let val2 = stack.pop();
+            let val1 = stack.pop();
+            let result = performOperation(val1, val2, token);
+            stack.push(result);
+          }
+          stack.push(token); 
+        }
+      }
+
+      while (stack.length > 1) {
+        let val2 = stack.pop();
+        let val1 = stack.pop();
+        stack.push(performOperation(val1, val2, stack.pop()));
+      }
+    
+      return stack.length ? stack.pop() : NaN;
+    }
+    
+    function performOperation(val1, val2, operator) {
+      switch (operator) {
+        case '+': return val1 + val2;
+        case '-': return val1 - val2;
+        case '*': return val1 * val2;
+        case '/': return val1 / val2;
+        default:  return NaN;  
+      }
+    }
+    
+    function hasPrecedence(op1, op2) {
+      if (op2 === '(' || op2 === ')') return false; 
+      if ((op1 === '*' || op1 === '/') && (op2 === '+' || op2 === '-')) return false;
+      return true;
+    }    
   
     const handleGeoLocationRequest = async () => {
       return new Promise((resolve, reject) => {
