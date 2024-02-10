@@ -170,7 +170,6 @@ document.title = searchTerm;
   async function main(searchedTerm) {
     try {
       if (requestIsInProgress) return;
-
       if (/^(create|make|generate|produce|draw|paint|design|craft|show me) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i.test(searchedTerm)) {
         searchedTerm = searchedTerm.replace(/^(create|make|generate|produce|draw|paint|design|craft|show me) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i, "");
         requestIsInProgress = true;
@@ -187,15 +186,6 @@ document.title = searchTerm;
           alert('There was an error generating the image. Please try again later.');
           hideLoader();
         }
-            } else if (/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i.test(searchTerm)) {
-            let url = searchTerm.match(/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i)[0];
-              if (!/^https?:\/\//i.test(url)) {
-                url = 'https://' + url;
-            }
-            
-            url = encodeURI(url); 
-            window.location.href = url;  
-
             } else if (/weather|forecast|temperature|rain|snow|storm|what'?s the weather|current weather|weather today|weekend weather|weather report|is it going to rain|will it snow|storm prediction|temperature today|temperature tomorrow/i.test(searchTerm)) {
             const redirectToWeatherForecast = async () => {
                 if ('geolocation' in navigator) {
@@ -224,8 +214,6 @@ document.title = searchTerm;
 
   async function fetchAssistantResponse(searchTerm, onUpdate) {
       if (/^(create|make|generate|produce|draw|paint|design|craft) (a|an)? (picture|image|photo|illustration|graphic|visual|representation|depiction|rendering|portrayal) of /i.test(searchTerm)) {
-      return null;
-    } else if (/^((https?:\/\/)?[^\s]+\.[^\s]+)$/i.test(searchTerm)) {
       return null;
     } else if (/weather|forecast|temperature|rain|snow|storm|what'?s the weather|current weather|weather today|weekend weather|weather report|is it going to rain|will it snow|storm prediction|temperature today|temperature tomorrow/i.test(searchTerm)) {
       return null;
@@ -480,6 +468,7 @@ document.title = searchTerm;
         await tryFetch(apiRequestUrl);
       }
     }
+
     let searchTermWithoutSpaces = searchTerm.replace(/\s+/g, '');
   
     let calculatorContainer = document.getElementById('calculator-container');
@@ -603,10 +592,9 @@ document.title = searchTerm;
   
     handleCalculator();
     await handleSearchRequest();
-  }
+    }
 
   function processResults(data) {
-
     resultsTable.innerHTML = '';
 
     function displayRelatedSearches(relatedSearches) {
@@ -627,11 +615,12 @@ document.title = searchTerm;
               relatedSearchesContainer.appendChild(button);
           }
       }
-  }
+    }
 
     if (data.relatedSearches) {
         displayRelatedSearches(data.relatedSearches.value);
     }
+
 if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
   isAllSearch = true;
   const searchResults = document.getElementById('search-results');
@@ -922,20 +911,10 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
 
   fullScreenImageOverlay = document.createElement('div');
   fullScreenImageOverlay.id = 'fullScreenImageOverlay';
-  fullScreenImageOverlay.style.position = 'fixed';
-  fullScreenImageOverlay.style.top = '0';
-  fullScreenImageOverlay.style.right = '0';
-  fullScreenImageOverlay.style.bottom = '0';
-  fullScreenImageOverlay.style.left = '0';
-  fullScreenImageOverlay.style.display = 'none';
-  fullScreenImageOverlay.style.alignItems = 'center';
-  fullScreenImageOverlay.style.justifyContent = 'center';
   fullScreenImageOverlay.classList.add('full-screen-image-overlay');
   document.body.appendChild(fullScreenImageOverlay);
-
   fullScreenImage = document.createElement('img');
   fullScreenImageOverlay.appendChild(fullScreenImage);
-
   fullScreenImage.addEventListener('click', () => {
     window.open(fullScreenImage.dataset.hostPageUrl, '_blank');
   });
@@ -949,6 +928,9 @@ if (data.webPages && data.webPages.value && data.webPages.value.length > 0) {
   closeButton.addEventListener('click', () => {
     hideFullScreenImage();
   });
+  function hideFullScreenImage() {
+    fullScreenImageOverlay.style.display = 'none';
+  }
 
   if (shouldloadnewimageresults) {
     const imagePromises = imagesData.map((image, index) => {
